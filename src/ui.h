@@ -22,6 +22,9 @@
 #include <QVTKOpenGLNativeWidget.h>
 #include <QString.h>
 #include <qsignalmapper.h>
+#include <QFileDialog.h>
+#include <QDir.h>
+#include <QTextStream.h>
 
 // OpenCV header files
 #include <opencv2/core.hpp>
@@ -51,23 +54,30 @@ public:
 	int threshold_val2 = 40;
 
 	// Declare label as member variable
-	QLabel* label1, *label2;
+	QLabel* label1, * label2;
 
 	// Delcare three vtkGenericOpenGLRenderWindow here
 	vtkSmartPointer<vtkGenericOpenGLRenderWindow> window1, window2, window3;
 
 	// Declare layouts
-	QHBoxLayout* layout_horizontal, * layout_horizontal2, *layout_horizontal3;
-	QVBoxLayout* layout_vertical1, * layout_vertical2, * layout_vertical3;
+	QHBoxLayout* layout_horizontal, * layout_horizontal2, * layout_horizontal3;
+	QVBoxLayout* layout_col1_load_img, * layout_vertical2, * layout_vertical3;
 
 	// Threshold filter
 	vtkSmartPointer<vtkImageThreshold> threshold_filter;
 
 	// Constructor (happens when created)
 	ui() {
+
+		// S==================== METADATA ==================== //
+		
 		// Resize the window
 		this->resize(1200, 400);
 
+		this->setWindowTitle("DICOM Reader");
+
+		// S======================= WIDGETS ======================= //
+		
 		// Create the "central" (primary) widget for the window
 		QWidget* widget = new QWidget();
 		this->setCentralWidget(widget);
@@ -76,6 +86,7 @@ public:
 		button1 = new QPushButton("Load Data");
 		button2 = new QPushButton("Threshold");
 		button3 = new QPushButton("Find Circles");
+		QPushButton* button_choose_dir = new QPushButton("Choose Directory");
 
 		// Create sliders
 		slider1 = new QSlider();
@@ -115,24 +126,35 @@ public:
 		viewport3->SetRenderWindow(window3);
 		viewport3->setMinimumSize(400, 400);
 
-		// Create layouts (create 2 horizontal layout with 3 vertical layouts)
-		layout_horizontal = new QHBoxLayout();
+
+
+		// S================ CREATE LAYOUTs ================ //
+
+		QVBoxLayout* layout_vertical_main = new QVBoxLayout();
+		widget->setLayout(layout_vertical_main);
+
+		QHBoxLayout* layout_row1 = new QHBoxLayout();
+		QHBoxLayout* layout_row2 = new QHBoxLayout();
+
 		layout_horizontal2 = new QHBoxLayout();
 		layout_horizontal3 = new QHBoxLayout();;
 
-		widget->setLayout(layout_horizontal);
-
-		layout_vertical1 = new QVBoxLayout();
+		layout_col1_load_img = new QVBoxLayout();
 		layout_vertical2 = new QVBoxLayout();
 		layout_vertical3 = new QVBoxLayout();
 
-		// Add layouts/widgets to layouts
-		layout_horizontal->addLayout(layout_vertical1);
-		layout_horizontal->addLayout(layout_vertical2);
-		layout_horizontal->addLayout(layout_vertical3);
+		// S========== ADD WIDGETS/LAYOUTS TO LAYOUTs ========= //
+		layout_vertical_main->addLayout(layout_row1);
+		layout_vertical_main->addLayout(layout_row2);
 
-		layout_vertical1->addWidget(viewport1);
-		layout_vertical1->addWidget(button1);
+		layout_row1->addLayout(layout_col1_load_img);
+		layout_row1->addLayout(layout_vertical2);
+		layout_row1->addLayout(layout_vertical3);
+
+		layout_row2->addWidget(button_choose_dir);
+
+		layout_col1_load_img->addWidget(viewport1);
+		layout_col1_load_img->addWidget(button1);
 
 		layout_vertical2->addWidget(viewport2);
 		layout_vertical2->addWidget(button2);
@@ -155,7 +177,7 @@ public:
 		connect(slider1, SIGNAL(valueChanged(int)), this, SLOT(slider1_changed(int)));
 		connect(slider2, SIGNAL(valueChanged(int)), this, SLOT(slider2_changed(int)));
 
-		// TODO: Figure out how to make signal pass arguments to slot function
+		connect(button_choose_dir, SIGNAL(released()), this, SLOT(choose_directory()));
 
 		// Display the window
 		this->show();
@@ -293,6 +315,23 @@ public slots:
 	void slider2_changed(int value) {
 		threshold_val2 = value;
 		label2->setText(QString::number(value));
+	}
+
+	/*
+	Pop up a dialog window that allows user to choose a directory. The dialog opens to 
+	the root folder of the current project.
+	*/
+	void choose_directory() {
+
+		// tr() is a Qt function for translating strings to multiple languages
+		QString dir = QFileDialog::getExistingDirectory(this, tr("Open Directory"),
+			"../" + QDir::currentPath(),
+			QFileDialog::ShowDirsOnly
+			| QFileDialog::DontResolveSymlinks);
+
+		QTextStream qt_cout(stdout);
+		qt_cout << dir;
+
 	}
 
 };
