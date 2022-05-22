@@ -15,6 +15,10 @@
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
+#include <vtkSmartVolumeMapper.h>
+#include <vtkPiecewiseFunction.h>
+#include <vtkColorTransferFunction.h>
+#include <vtkVolumeProperty.h>
 
 
 
@@ -167,19 +171,12 @@ public:
 
 	}
 
-public slots:
-
-	/*void load_DICOM() {
-		QDir dicom_dir = choose_directory();
-	}*/
-
-
-	void load_DICOM() {
+	void load_DICOM_image_x() {
 
 		is_data_loaded = false;
 		cout << "loading data\n";
 
-		QDir dicom_dir = choose_directory();
+		//QDir dicom_dir = choose_directory();
 
 		// Read all the DICOM files in the specified directory.
 		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
@@ -189,7 +186,7 @@ public slots:
 		reader->SetDirectoryName("../data");
 
 		// Force update, since we need to get information about the data dimensions
-		reader->Update(); 
+		reader->Update();
 
 		int* dims = reader->GetOutput()->GetDimensions(); // Get the data dimensions
 		double* range = reader->GetOutput()->GetScalarRange(); // Get the range of intensity values
@@ -219,7 +216,7 @@ public slots:
 
 		// Connect the reslice filter to the mapper
 		iactor->GetMapper()->SetInputConnection(reslice->GetOutputPort());
-		
+
 		// Renderer
 		renderer = vtkSmartPointer<vtkRenderer>::New();
 		renderer->AddActor(iactor); // Add the actor to the renderer
@@ -242,6 +239,90 @@ public slots:
 		is_data_loaded = true;
 
 	}
+
+	/*
+	Render DICOM as volume
+	*/
+	void load_DICOM_volume() {
+
+		is_data_loaded = false;
+		cout << "loading data\n";
+
+		//QDir dicom_dir = choose_directory();
+
+		// Read all the DICOM files in the specified directory.
+		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
+
+		// TODO: figure out a better way to convert QString to a char * to pass to SetDirectoryName
+		//reader->SetDirectoryName(dicom_dir.absolutePath().toStdString().c_str());
+		reader->SetDirectoryName("../data");
+
+		// Force update, since we need to get information about the data dimensions
+		reader->Update();
+
+		/* Code taken from in-class example */
+		// volume mapper
+		vtkSmartPointer<vtkSmartVolumeMapper> volumeMapper = vtkSmartPointer<vtkSmartVolumeMapper>::New();
+		volumeMapper->SetBlendModeToComposite(); // composite
+		volumeMapper->SetInputConnection(reader->GetOutputPort());
+		volumeMapper->SetRequestedRenderModeToRayCast();
+
+		// volume properties
+		vtkSmartPointer<vtkVolumeProperty> volumeProperty = vtkSmartPointer<vtkVolumeProperty>::New();
+		volumeProperty->ShadeOff();
+		volumeProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
+
+		// opacity
+		vtkSmartPointer<vtkPiecewiseFunction> opacity = vtkSmartPointer<vtkPiecewiseFunction>::New();
+		opacity->AddPoint(0.0, 0.0);
+		opacity->AddPoint(90.0, 0.05);
+		opacity->AddPoint(555.0, 0.1);
+		volumeProperty->SetScalarOpacity(opacity);
+
+		// colormap
+		vtkSmartPointer<vtkColorTransferFunction> color = vtkSmartPointer<vtkColorTransferFunction>::New();
+		color->AddRGBPoint(0.0, 0.0, 0.0, 1.0);
+		color->AddRGBPoint(300.0, 1.0, 0.0, 0.0);
+		color->AddRGBPoint(555.0, 1.0, 1.0, 1.0);
+		volumeProperty->SetColor(color);
+
+		// create volume using the volume mapper and volume properties
+		vtkSmartPointer<vtkVolume> volume = vtkSmartPointer<vtkVolume>::New();
+		volume->SetMapper(volumeMapper);
+		volume->SetProperty(volumeProperty);
+
+		// renderer
+		vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+		renderer->AddViewProp(volume);
+		renderer->ResetCamera();
+
+		// render window
+		window_volume->AddRenderer(renderer);
+		window_volume->Render();
+
+		// interactor
+		/*vtkSmartPointer<vtkRenderWindowInteractor> iren =
+			vtkSmartPointer<vtkRenderWindowInteractor>::New();
+		iren->SetRenderWindow(window_volume);*/
+
+		// start interactor
+		//iren->Start();
+
+		cout << "finished loading data\n";
+		is_data_loaded = true;
+	}
+
+public slots:
+
+	/*void load_DICOM() {
+		QDir dicom_dir = choose_directory();
+	}*/
+
+	void load_DICOM() {
+		load_DICOM_image_x();
+		load_DICOM_volume();
+	}
+
 
 	void sliderx_changed(int value) {
 
