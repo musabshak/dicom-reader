@@ -184,3 +184,18 @@ QSlider::handle:vertical:disabled
 	border-radius: 3px;
 
 }
+
+QLabel
+{
+	background-color: white;
+	color: black;
+
+}
+
+
+QLabel::disabled
+{
+	background-color: transparent;
+	color: #656565;
+
+}

@@ -114,11 +114,18 @@ public:
 		auto fileMenu = menuBar()->addMenu("&File");
 		fileMenu->addAction(load_action);
 
+		/* Slice labels */
+
+		QLabel* label01 = new QLabel("#");
+		label01->setFixedSize(60, 20);
+
 
 		// S================ CREATE LAYOUTs ================ //
 		QVBoxLayout* layout_vertical_main = new QVBoxLayout();
 		QHBoxLayout* layout_row0 = new QHBoxLayout();
 		QHBoxLayout* layout_row1 = new QHBoxLayout();
+
+		QVBoxLayout* layout_slicenum_01 = new QVBoxLayout();
 
 
 		// S========== ADD WIDGETS/LAYOUTS TO LAYOUTs ========= //
@@ -132,6 +139,10 @@ public:
 		layout_row0->addWidget(viewport_volume);
 		layout_row0->addWidget(slider_x);
 		layout_row0->addWidget(viewport_x);
+
+		viewport_x->setLayout(layout_slicenum_01);
+		layout_slicenum_01->addWidget(label01);
+		layout_slicenum_01->addStretch();
 
 		layout_row1->addWidget(slider_y);
 		layout_row1->addWidget(viewport_y);
