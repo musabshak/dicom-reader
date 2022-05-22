@@ -1,7 +1,7 @@
 
 cmake_minimum_required(VERSION 3.0) # specifies the minimum version of CMake we need
 cmake_policy(SET CMP0043 NEW) # avoids warnings related to a deprecated policy (optional, just for convenience)
- 
+
 project(final_project)
 
 # here we specify where the libraries we want are located
@@ -33,17 +33,17 @@ file(GLOB H_FILES *.h)
 file(GLOB CXX_FILES *.cxx)
 
 # create executable project
-add_executable(assignment ${CXX_FILES} ${H_FILES})
+add_executable(final_project ${CXX_FILES} ${H_FILES})
 
 # tell qt which components we want (qt has lots of modules)
-qt5_use_modules(assignment Core Gui Widgets Sql Network winextras)
+qt5_use_modules(final_project Core Gui Widgets Sql Network winextras)
 
 # set the executable to be the primary project (the one that runs)
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT assignment)
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT final_project)
 
 # link libraries (qt is automatically linked by the qt5_use_modules statement earlier)
-target_link_libraries(assignment ${VTK_LIBRARIES}) # vtk
-target_link_libraries(assignment ${OpenCV_LIBS}) # opencv
+target_link_libraries(final_project ${VTK_LIBRARIES}) # vtk
+target_link_libraries(final_project ${OpenCV_LIBS}) # opencv
 
 # set the path so the DLLs can be found at runtime
-set_target_properties(assignment PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=${OpenCV_DIR}/x64/vc15/bin;${VTK_DIR}/bin/$(Configuration);${CMAKE_PREFIX_PATH}/bin;%PATH%")
+set_target_properties(final_project PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=${OpenCV_DIR}/x64/vc15/bin;${VTK_DIR}/bin/$(Configuration);${CMAKE_PREFIX_PATH}/bin;%PATH%")

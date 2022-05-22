@@ -2,6 +2,7 @@
 // Qt header files
 #include <QApplication>
 #include <QCoreApplication>
+#include <QFile>
 
 // Our header files
 #include "ui.h"
@@ -19,6 +20,12 @@ void main()
 
 	// Create the user interface
 	ui myui;
+
+	QFile file("../src/stylesheet.qss");
+	file.open(QFile::ReadOnly);
+	QString styleSheet = QLatin1String(file.readAll());
+
+	app.setStyleSheet(styleSheet);
 
 	// Start the Qt application event loop
 	app.exec();
