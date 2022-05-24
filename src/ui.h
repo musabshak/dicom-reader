@@ -47,6 +47,8 @@ public:
 
 	vtkSmartPointer<vtkGenericOpenGLRenderWindow> window_volume, window_x, window_y, window_z;
 
+	QLabel* label_slice_x;
+
 	vtkSmartPointer<vtkMatrix4x4> reslice_axes;
 	vtkSmartPointer<vtkImageReslice> reslice;
 	vtkSmartPointer<vtkImageActor> iactor;
@@ -115,9 +117,8 @@ public:
 		fileMenu->addAction(load_action);
 
 		/* Slice labels */
-
-		QLabel* label01 = new QLabel("#");
-		label01->setFixedSize(60, 20);
+		label_slice_x = new QLabel("#");
+		label_slice_x->setFixedSize(60, 20);
 
 
 		// S================ CREATE LAYOUTs ================ //
@@ -141,7 +142,7 @@ public:
 		layout_row0->addWidget(viewport_x);
 
 		viewport_x->setLayout(layout_slicenum_01);
-		layout_slicenum_01->addWidget(label01);
+		layout_slicenum_01->addWidget(label_slice_x);
 		layout_slicenum_01->addStretch();
 
 		layout_row1->addWidget(slider_y);
@@ -345,6 +346,9 @@ public slots:
 		// Set the slice
 		reslice_axes->SetElement(2, 3, value);
 		reslice->Modified();
+
+		// Update the slice label
+		label_slice_x->setText(QString::number(value));
 
 		// Re-render the image data
 		window_x->Render();
