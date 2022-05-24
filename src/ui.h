@@ -47,12 +47,18 @@ public:
 
 	vtkSmartPointer<vtkGenericOpenGLRenderWindow> window_volume, window_x, window_y, window_z;
 
-	QLabel* label_slice_x;
+	QLabel* label_slice_x, *label_slice_y, *label_slice_z;
 
 	vtkSmartPointer<vtkMatrix4x4> reslice_axes;
 	vtkSmartPointer<vtkImageReslice> reslice;
 	vtkSmartPointer<vtkImageActor> iactor;
 	vtkSmartPointer<vtkRenderer> renderer;
+
+	vtkSmartPointer<vtkMatrix4x4> reslice_axes_y;
+	vtkSmartPointer<vtkImageReslice> reslice_y;
+
+	vtkSmartPointer<vtkImageActor> iactor_y;
+	vtkSmartPointer<vtkRenderer> renderer_y;
 
 	bool is_data_loaded = false;
 
@@ -120,13 +126,21 @@ public:
 		label_slice_x = new QLabel("#");
 		label_slice_x->setFixedSize(60, 20);
 
+		label_slice_y = new QLabel("#");
+		label_slice_y->setFixedSize(60, 20);
+
+		label_slice_z = new QLabel("#");
+		label_slice_z->setFixedSize(60, 20);
+
 
 		// S================ CREATE LAYOUTs ================ //
 		QVBoxLayout* layout_vertical_main = new QVBoxLayout();
 		QHBoxLayout* layout_row0 = new QHBoxLayout();
 		QHBoxLayout* layout_row1 = new QHBoxLayout();
 
-		QVBoxLayout* layout_slicenum_01 = new QVBoxLayout();
+		QVBoxLayout* layout_label_slice_x = new QVBoxLayout();
+		QVBoxLayout* layout_label_slice_y = new QVBoxLayout();
+		QVBoxLayout* layout_label_slice_z = new QVBoxLayout();
 
 
 		// S========== ADD WIDGETS/LAYOUTS TO LAYOUTs ========= //
@@ -141,9 +155,17 @@ public:
 		layout_row0->addWidget(slider_x);
 		layout_row0->addWidget(viewport_x);
 
-		viewport_x->setLayout(layout_slicenum_01);
-		layout_slicenum_01->addWidget(label_slice_x);
-		layout_slicenum_01->addStretch();
+		viewport_x->setLayout(layout_label_slice_x);
+		layout_label_slice_x->addWidget(label_slice_x);
+		layout_label_slice_x->addStretch();
+
+		viewport_y->setLayout(layout_label_slice_y);
+		layout_label_slice_y->addWidget(label_slice_y);
+		layout_label_slice_y->addStretch();
+
+		viewport_z->setLayout(layout_label_slice_z);
+		layout_label_slice_z->addWidget(label_slice_z);
+		layout_label_slice_z->addStretch();
 
 		layout_row1->addWidget(slider_y);
 		layout_row1->addWidget(viewport_y);
@@ -155,7 +177,7 @@ public:
 		// S========== CONNECT SIGNALS TO SLOTS ========= //
 		connect(load_action, SIGNAL(triggered()), this, SLOT(load_DICOM()));
 		connect(slider_x, SIGNAL(valueChanged(int)), this, SLOT(sliderx_changed(int)));
-		//connect(slider_y, SIGNAL(valueChanged(int)), this, SLOT(sliderx_changed(int)));
+		connect(slider_y, SIGNAL(valueChanged(int)), this, SLOT(slidery_changed(int)));
 		//connect(slider_z, SIGNAL(valueChanged(int)), this, SLOT(sliderx_changed(int)));
 
 		// Display the window
@@ -183,7 +205,7 @@ public:
 
 	}
 
-	void load_DICOM_image_x() {
+	void load_DICOM_image_x(QDir dicom_dir) {
 
 		is_data_loaded = false;
 		cout << "loading data\n";
@@ -194,8 +216,7 @@ public:
 		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
 
 		// TODO: figure out a better way to convert QString to a char * to pass to SetDirectoryName
-		//reader->SetDirectoryName(dicom_dir.absolutePath().toStdString().c_str());
-		reader->SetDirectoryName("../data");
+		reader->SetDirectoryName(dicom_dir.absolutePath().toStdString().c_str());
 
 		// Force update, since we need to get information about the data dimensions
 		reader->Update();
@@ -252,10 +273,8 @@ public:
 
 	}
 
-	/*
-	Render DICOM as volume
-	*/
-	void load_DICOM_volume() {
+	// TODO: refactor code; create general load_DICOM_image fxn
+	void load_DICOM_image_y(QDir dicom_dir) {
 
 		is_data_loaded = false;
 		cout << "loading data\n";
@@ -266,8 +285,78 @@ public:
 		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
 
 		// TODO: figure out a better way to convert QString to a char * to pass to SetDirectoryName
-		//reader->SetDirectoryName(dicom_dir.absolutePath().toStdString().c_str());
-		reader->SetDirectoryName("../data");
+		reader->SetDirectoryName(dicom_dir.absolutePath().toStdString().c_str());
+
+		// Force update, since we need to get information about the data dimensions
+		reader->Update();
+
+		int* dims = reader->GetOutput()->GetDimensions(); // Get the data dimensions
+		double* range = reader->GetOutput()->GetScalarRange(); // Get the range of intensity values
+
+		// Create a matrix which defines a plane. This plane will be used to "slice" the data
+		static double axial[16] = {
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1 };
+
+		reslice_axes_y = vtkSmartPointer<vtkMatrix4x4>::New();
+		reslice_axes_y->DeepCopy(axial);
+
+		// vtkImageReslice is the filter that does the slicing (slices a 3D dataset to become 2D)
+		reslice_y = vtkSmartPointer<vtkImageReslice>::New();
+		reslice_y->SetInputConnection(reader->GetOutputPort()); // connect the reader to this filter
+		reslice_y->SetOutputDimensionality(2);
+		reslice_y->SetResliceAxes(reslice_axes_y); // tell it what plane to slice with
+		reslice_y->SetInterpolationModeToLinear();
+		reslice_y->Update();
+
+		// Create an actor for the image. You'll notice we skipped the mapper step. This is because
+		// image actors have a default mapper we can use as is if we don't want to change 
+		// the colormap etc.
+		iactor_y = vtkSmartPointer<vtkImageActor>::New();
+
+		// Connect the reslice filter to the mapper
+		iactor_y->GetMapper()->SetInputConnection(reslice_y->GetOutputPort());
+
+		// Renderer
+		renderer_y = vtkSmartPointer<vtkRenderer>::New();
+		renderer_y->AddActor(iactor_y); // Add the actor to the renderer
+
+		// Add the renderer to the render window
+		window_y->AddRenderer(renderer_y);
+
+		// Render (display the image)
+		window_y->Render();
+
+		// Ensure we aren't clipping any of the image (cameras have a front and back plane that 
+		// clips for performance)
+		renderer_y->ResetCameraClippingRange();
+
+		// Tell our slider widget what the min/max slice numbers are
+		slider_y->setRange(0, dims[2] - 1);
+
+
+		cout << "finished loading data\n";
+		is_data_loaded = true;
+
+	}
+
+	/*
+	Render DICOM as volume
+	*/
+	void load_DICOM_volume(QDir dicom_dir) {
+
+		is_data_loaded = false;
+		cout << "loading data\n";
+
+		//QDir dicom_dir = choose_directory();
+
+		// Read all the DICOM files in the specified directory.
+		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
+
+		// TODO: figure out a better way to convert QString to a char * to pass to SetDirectoryName
+		reader->SetDirectoryName(dicom_dir.absolutePath().toStdString().c_str());
 
 		// Force update, since we need to get information about the data dimensions
 		reader->Update();
@@ -331,8 +420,11 @@ public slots:
 	}*/
 
 	void load_DICOM() {
-		load_DICOM_image_x();
-		load_DICOM_volume();
+		//QDir dicom_dir = choose_directory();
+		QDir dicom_dir = QDir("../data");
+		load_DICOM_image_x(dicom_dir);
+		load_DICOM_image_y(dicom_dir);
+		load_DICOM_volume(dicom_dir);
 	}
 
 
@@ -352,6 +444,28 @@ public slots:
 
 		// Re-render the image data
 		window_x->Render();
+
+		// Convert int value to QString type, expected by setText
+		//label->setText(QString::number(value));
+
+	}
+
+	void slidery_changed(int value) {
+
+		if (!is_data_loaded) {
+			cout << "data not loaded yet!\n";
+			return;
+		}
+
+		// Set the slice
+		reslice_axes_y->SetElement(2, 3, value);
+		reslice_y->Modified();
+
+		// Update the slice label
+		label_slice_y->setText(QString::number(value));
+
+		// Re-render the image data
+		window_y->Render();
 
 		// Convert int value to QString type, expected by setText
 		//label->setText(QString::number(value));
