@@ -30,8 +30,8 @@ QLabel::disabled
 /*-----QMenuBar-----*/
 QMenuBar
 {
-	background-color: #0a0a0a;
-	color: #ffffff;
+	background-color: transparent;
+	color: white;
 	border-color: #051a39;
 
 }
@@ -49,7 +49,6 @@ QMenuBar::disabled
 QMenuBar::item
 {
     background-color: transparent;
-
 }
 
 
@@ -114,10 +113,79 @@ QMenu::item:disabled
     color: #262626;
 }
 
+/*-----QSlider-----*/
+
+QSlider::vertical {
+	width: 20px;
+}
+
+QSlider::horizontal {
+	height: 15px;
+}
+
+QSlider::groove:horizontal 
+{
+	background-color: transparent;
+	height: 5px;
+
+}
 
 
-QSlider {
-    width: 20px;
+QSlider::sub-page:horizontal 
+{
+	background-color: #607cff;
+
+}
+
+
+QSlider::add-page:horizontal 
+{
+	background-color: #666765;
+
+}
+
+
+QSlider::handle:horizontal 
+{
+	background-color: #607cff;
+	width: 14px;
+	margin-top: -6px;
+	margin-bottom: -6px;
+	border-radius: 3px;
+
+}
+
+
+QSlider::handle:horizontal:hover 
+{
+	background-color: #607cff;
+	border-radius: 3px;
+
+}
+
+
+QSlider::sub-page:horizontal:disabled 
+{
+	background-color: #bbb;
+	border-color: #999;
+
+}
+
+
+QSlider::add-page:horizontal:disabled 
+{
+	background-color: #eee;
+	border-color: #999;
+
+}
+
+
+QSlider::handle:horizontal:disabled 
+{
+	background-color: #eee;
+	border: 1px solid #aaa;
+	border-radius: 3px;
+
 }
 
 QSlider::groove:vertical 
@@ -189,6 +257,7 @@ QLabel
 {
 	background-color: white;
 	color: black;
+	border-radius: 5px;
 
 }
 
@@ -198,4 +267,28 @@ QLabel::disabled
 	background-color: transparent;
 	color: #656565;
 
+}
+
+QLabel#transparency_label0 {
+	background-color: transparent;
+	color: white;
+}
+
+QLabel#transparency_label1 {
+	background-color: transparent;
+	color: white;
+}
+
+QLabel#col0_heading {
+	background-color: transparent;
+	color: white;
+	font: bold;
+	font-size: 15px;
+}
+
+QLabel#col1_heading {
+	background-color: transparent;
+	color: white;
+	font: bold;
+	font-size: 15px;
 }

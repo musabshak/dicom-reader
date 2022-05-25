@@ -49,16 +49,23 @@ public:
 
 	static const int NUM_VIEWPORTS = 4;
 
-	QSlider* slider_arr[NUM_VIEWPORTS]; // 0th element is blank (3 sliders but 4 viewports)
+	// slice transparency slider labees
+	QLabel* transparency_label0, * transparency_label1;
+	
+	// 3 sliders to control slice # for each of the 3 planes 
+	// (and accompanying labels) (one extra for index purposes)
+	QSlider* slider_arr[NUM_VIEWPORTS]; // 0th element is blank
 	QLabel* slider_label_arr[NUM_VIEWPORTS];
 
+	// 4 Qt viewports with a vtk render window in each
 	QVTKOpenGLNativeWidget* viewport_arr[NUM_VIEWPORTS];
 	vtkSmartPointer<vtkGenericOpenGLRenderWindow> window_arr[NUM_VIEWPORTS];
 
-	vtkSmartPointer<vtkMatrix4x4> reslice_axes_arr[4];
-	vtkSmartPointer<vtkImageReslice> reslice_arr[4];
-	vtkSmartPointer<vtkImageActor> iactor_arr[4];
-	vtkSmartPointer<vtkRenderer> renderer_arr[4];
+	// vtk actors, filters, renderers for dataset 1
+	vtkSmartPointer<vtkMatrix4x4> reslice_axes_arr[NUM_VIEWPORTS];
+	vtkSmartPointer<vtkImageReslice> reslice_arr[NUM_VIEWPORTS];
+	vtkSmartPointer<vtkImageActor> iactor_arr[NUM_VIEWPORTS];
+	vtkSmartPointer<vtkRenderer> renderer_arr[NUM_VIEWPORTS];
 
 	bool is_data_loaded = false;
 
@@ -89,24 +96,25 @@ public:
 	// Constructor (happens when created)
 	ui() {
 
-
 		// S==================== METADATA ==================== //
 
-		// Resize the window
+		// Resize the window, set the title
 		this->resize(1200, 400);
-
 		this->setWindowTitle("DICOM Reader");
+
+
+
+
 
 		// S======================= WIDGETS ======================= //
 
 		// Create the "central" (primary) widget for the window
 		QWidget* widget = new QWidget();
 
-		// initialize sliders for each of the 3 slice planes
-		for (int i = 1; i < NUM_VIEWPORTS; i++) {
-			slider_arr[i] = new QSlider();
-			slider_arr[i]->setOrientation(Qt::Vertical);
-		}
+		// Add a menu item with one action to QMainWindow's in-built menu bar 
+		QAction* load_action = new QAction("Load DICOM data");
+		auto fileMenu = menuBar()->addMenu("&File");
+		fileMenu->addAction(load_action);
 
 		// initialize Qt viewports and VTK render windows
 		for (int i = 0; i < NUM_VIEWPORTS; i++) {
@@ -125,29 +133,62 @@ public:
 
 		}
 
+		// initialize sliders for each of the 3 slice planes
+		for (int i = 1; i < NUM_VIEWPORTS; i++) {
+			slider_arr[i] = new QSlider();
+			slider_arr[i]->setOrientation(Qt::Vertical);
+		}
+
 		// initialize slice labels for the 3 planes
 		for (int i = 1; i < NUM_VIEWPORTS; i++) {
 			slider_label_arr[i] = new QLabel("#");
 			slider_label_arr[i]->setFixedSize(60, 20);
 		}
 
-		/* Add a menu item with one action to QMainWindow's in-built menu bar */
-		QAction* load_action = new QAction("Load DICOM data");
-		auto fileMenu = menuBar()->addMenu("&File");
-		fileMenu->addAction(load_action);
+		// dataset header labels
+		QLabel* col0_heading = new QLabel("Dataset 1");
+		col0_heading->setObjectName("col0_heading");
+
+		QLabel* col1_heading = new QLabel("Dataset 2");
+		col1_heading->setObjectName("col1_heading");
+
+		// initialize transparency slider labels
+		transparency_label0 = new QLabel("Opacity: 1");
+		transparency_label0->setObjectName("transparency_label0");
+
+		transparency_label1 = new QLabel("Opacity: 1");
+		transparency_label1->setObjectName("transparency_label1");
+
+		// initialize transparency sliders
+		QSlider* transparency_slider0 = new QSlider();
+		transparency_slider0->setOrientation(Qt::Horizontal);
+		transparency_slider0->setRange(0, 100);
+
+		QSlider* transparency_slider1 = new QSlider();
+		transparency_slider1->setOrientation(Qt::Horizontal);
+		transparency_slider1->setRange(0, 100);
+
+
 
 
 		// S================ CREATE LAYOUTs ================ //
 		QVBoxLayout* layout_vertical_main = new QVBoxLayout();
 		QHBoxLayout* layout_row0 = new QHBoxLayout();
 		QHBoxLayout* layout_row1 = new QHBoxLayout();
+		QHBoxLayout* layout_row2 = new QHBoxLayout();
 
-		QVBoxLayout* layout_label_slice_arr[4];
+		// 2 vertical layouts for row0 for the two datasets
+		QVBoxLayout* layout_col0 = new QVBoxLayout();
+		QVBoxLayout* layout_col1 = new QVBoxLayout();
+
+		QVBoxLayout* layout_slice_label_arr[4];
 
 		// initialize layouts for slice labels for the 3 planes
 		for (int i = 1; i < NUM_VIEWPORTS; i++) {
-			layout_label_slice_arr[i] = new QVBoxLayout();
+			layout_slice_label_arr[i] = new QVBoxLayout();
 		}
+
+
 
 
 		// S========== ADD WIDGETS/LAYOUTS TO LAYOUTs ========= //
@@ -156,27 +197,44 @@ public:
 
 		layout_vertical_main->addLayout(layout_row0);
 		layout_vertical_main->addLayout(layout_row1);
+		layout_vertical_main->addLayout(layout_row2);
 
 		// populate row0
-		layout_row0->addSpacing(22); // no slider for volume view
-		layout_row0->addWidget(viewport_arr[VOLUME]);
+		layout_row0->addLayout(layout_col0);
+		layout_row0->addLayout(layout_col1);
+		layout_row0->addSpacing(10);
 
-		layout_row0->addWidget(slider_arr[AXIAL]);
-		layout_row0->addWidget(viewport_arr[AXIAL]);
+		// populate col0, col1
+		layout_col0->addWidget(col0_heading, Qt::AlignCenter);
+		layout_col0->addWidget(transparency_label0);
+		layout_col0->addWidget(transparency_slider0);
+
+		layout_col1->addWidget(col1_heading, Qt::AlignCenter);
+		layout_col1->addWidget(transparency_label1);
+		layout_col1->addWidget(transparency_slider1);
 
 		// populate row1
-		layout_row1->addWidget(slider_arr[CORONAL]);
-		layout_row1->addWidget(viewport_arr[CORONAL]);
+		layout_row1->addSpacing(22); // no slider for volume view
+		layout_row1->addWidget(viewport_arr[VOLUME]);
 
-		layout_row1->addWidget(slider_arr[SAGITTAL]);
-		layout_row1->addWidget(viewport_arr[SAGITTAL]);
+		layout_row1->addWidget(slider_arr[AXIAL]);
+		layout_row1->addWidget(viewport_arr[AXIAL]);
+
+		// populate row2
+		layout_row2->addWidget(slider_arr[CORONAL]);
+		layout_row2->addWidget(viewport_arr[CORONAL]);
+
+		layout_row2->addWidget(slider_arr[SAGITTAL]);
+		layout_row2->addWidget(viewport_arr[SAGITTAL]);
 
 		// populate slider labels for each of 3 planes
 		for (int i = 1; i < NUM_VIEWPORTS; i++) {
-			viewport_arr[i]->setLayout(layout_label_slice_arr[i]);
-			layout_label_slice_arr[i]->addWidget(slider_label_arr[i]);
-			layout_label_slice_arr[i]->addStretch();
+			viewport_arr[i]->setLayout(layout_slice_label_arr[i]);
+			layout_slice_label_arr[i]->addWidget(slider_label_arr[i]);
+			layout_slice_label_arr[i]->addStretch();
 		}
+
+
 
 
 		// S========== CONNECT SIGNALS TO SLOTS ========= //
@@ -347,7 +405,7 @@ public slots:
 	void load_DICOM() {
 
 		// QDir dicom_dir = choose_directory();
-		QDir dicom_dir = QDir("../data_bu");
+		QDir dicom_dir = QDir("../data/subset");
 
 		load_DICOM_image(dicom_dir, AXIAL);
 		load_DICOM_image(dicom_dir, CORONAL);
