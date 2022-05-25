@@ -49,9 +49,22 @@ public:
 
 	static const int NUM_VIEWPORTS = 4;
 
-	// slice transparency slider labees
-	QLabel* transparency_label0, * transparency_label1;
-	
+	char slice_label_texts[4][50] = {
+		"",
+		"Axial (xy). Slice: ",
+		"Coronal (xz). Slice: ",
+		"Sagittal (yz). Slice: ",
+	};
+
+	// dataset column headings
+	QLabel* col0_heading, * col1_heading;
+
+	// opacity sliders
+	QSlider* opacity_slider0, * opacity_slider1;
+
+	// slice opacity slider labels
+	QLabel* opacity_label0, * opacity_label1;
+
 	// 3 sliders to control slice # for each of the 3 planes 
 	// (and accompanying labels) (one extra for index purposes)
 	QSlider* slider_arr[NUM_VIEWPORTS]; // 0th element is blank
@@ -67,7 +80,8 @@ public:
 	vtkSmartPointer<vtkImageActor> iactor_arr[NUM_VIEWPORTS];
 	vtkSmartPointer<vtkRenderer> renderer_arr[NUM_VIEWPORTS];
 
-	bool is_data_loaded = false;
+	bool is_data1_loaded = false;
+	bool is_data2_loaded = false;
 
 	// matrices that defines planes for slicing
 	// https://public.kitware.com/pipermail/vtkusers/2016-January/093908.html
@@ -111,10 +125,12 @@ public:
 		// Create the "central" (primary) widget for the window
 		QWidget* widget = new QWidget();
 
-		// Add a menu item with one action to QMainWindow's in-built menu bar 
-		QAction* load_action = new QAction("Load DICOM data");
+		// Add two menu itmes to QMainWindow's in-built menu bar 
+		QAction* load_dset1_action = new QAction("Load DICOM dataset 1");
+		QAction* load_dset2_action = new QAction("Load DICOM dataset 2");
 		auto fileMenu = menuBar()->addMenu("&File");
-		fileMenu->addAction(load_action);
+		fileMenu->addAction(load_dset1_action);
+		fileMenu->addAction(load_dset2_action);
 
 		// initialize Qt viewports and VTK render windows
 		for (int i = 0; i < NUM_VIEWPORTS; i++) {
@@ -141,32 +157,38 @@ public:
 
 		// initialize slice labels for the 3 planes
 		for (int i = 1; i < NUM_VIEWPORTS; i++) {
-			slider_label_arr[i] = new QLabel("#");
-			slider_label_arr[i]->setFixedSize(60, 20);
+			slider_label_arr[i] = new QLabel(slice_label_texts[i]);
+			//slider_label_arr[i]->setFixedSize(60, 20);
+			slider_label_arr[i]->setAlignment(Qt::AlignCenter);
+			slider_label_arr[i]->setStyleSheet("padding: 2px");
 		}
 
 		// dataset header labels
-		QLabel* col0_heading = new QLabel("Dataset 1");
+		col0_heading = new QLabel("Dataset 1: <no data loaded>");
 		col0_heading->setObjectName("col0_heading");
+		col0_heading->setAlignment(Qt::AlignCenter);
 
-		QLabel* col1_heading = new QLabel("Dataset 2");
+		col1_heading = new QLabel("Dataset 2: <no data loaded>");
 		col1_heading->setObjectName("col1_heading");
+		col1_heading->setAlignment(Qt::AlignCenter);
 
-		// initialize transparency slider labels
-		transparency_label0 = new QLabel("Opacity: 1");
-		transparency_label0->setObjectName("transparency_label0");
+		// initialize opacity slider labels
+		opacity_label0 = new QLabel("Opacity: 100");
+		opacity_label0->setObjectName("opacity_label0");
 
-		transparency_label1 = new QLabel("Opacity: 1");
-		transparency_label1->setObjectName("transparency_label1");
+		opacity_label1 = new QLabel("Opacity: 100");
+		opacity_label1->setObjectName("opacity_label1");
 
-		// initialize transparency sliders
-		QSlider* transparency_slider0 = new QSlider();
-		transparency_slider0->setOrientation(Qt::Horizontal);
-		transparency_slider0->setRange(0, 100);
+		// initialize opacity sliders
+		opacity_slider0 = new QSlider();
+		opacity_slider0->setOrientation(Qt::Horizontal);
+		opacity_slider0->setRange(0, 100);
+		opacity_slider0->setValue(100);
 
-		QSlider* transparency_slider1 = new QSlider();
-		transparency_slider1->setOrientation(Qt::Horizontal);
-		transparency_slider1->setRange(0, 100);
+		opacity_slider1 = new QSlider();
+		opacity_slider1->setOrientation(Qt::Horizontal);
+		opacity_slider1->setRange(0, 100);
+		opacity_slider1->setValue(100);
 
 
 
@@ -202,16 +224,16 @@ public:
 		// populate row0
 		layout_row0->addLayout(layout_col0);
 		layout_row0->addLayout(layout_col1);
-		layout_row0->addSpacing(10);
+		layout_row0->addSpacing(15);
 
 		// populate col0, col1
 		layout_col0->addWidget(col0_heading, Qt::AlignCenter);
-		layout_col0->addWidget(transparency_label0);
-		layout_col0->addWidget(transparency_slider0);
+		layout_col0->addWidget(opacity_label0);
+		layout_col0->addWidget(opacity_slider0);
 
 		layout_col1->addWidget(col1_heading, Qt::AlignCenter);
-		layout_col1->addWidget(transparency_label1);
-		layout_col1->addWidget(transparency_slider1);
+		layout_col1->addWidget(opacity_label1);
+		layout_col1->addWidget(opacity_slider1);
 
 		// populate row1
 		layout_row1->addSpacing(22); // no slider for volume view
@@ -238,12 +260,26 @@ public:
 
 
 		// S========== CONNECT SIGNALS TO SLOTS ========= //
-		// file menu: load DICOM dataset action
-		connect(load_action, SIGNAL(triggered()), this, SLOT(load_DICOM()));
 
-		connect(slider_arr[AXIAL], SIGNAL(valueChanged(int)), this, SLOT(slider_changed(int)));
-		connect(slider_arr[CORONAL], SIGNAL(valueChanged(int)), this, SLOT(slider_changed(int)));
-		connect(slider_arr[SAGITTAL], SIGNAL(valueChanged(int)), this, SLOT(slider_changed(int)));
+		// file menu: load DICOM dataset actions
+		connect(load_dset1_action, SIGNAL(triggered()),
+			this, SLOT(load_dset1()));
+		connect(load_dset2_action, SIGNAL(triggered()),
+			this, SLOT(load_dset2()));
+
+		// connect slice sliders
+		connect(slider_arr[AXIAL], SIGNAL(valueChanged(int)),
+			this, SLOT(slice_slider_changed(int)));
+		connect(slider_arr[CORONAL], SIGNAL(valueChanged(int)),
+			this, SLOT(slice_slider_changed(int)));
+		connect(slider_arr[SAGITTAL], SIGNAL(valueChanged(int)),
+			this, SLOT(slice_slider_changed(int)));
+
+		// connect opacity sliders
+		connect(opacity_slider0, SIGNAL(valueChanged(int)),
+			this, SLOT(opacity_slider_changed(int)));
+		connect(opacity_slider1, SIGNAL(valueChanged(int)),
+			this, SLOT(opacity_slider_changed(int)));
 
 		// Display the window
 		this->show();
@@ -278,7 +314,7 @@ public:
 			return;
 		}
 
-		is_data_loaded = false;
+		is_data1_loaded = false;
 		cout << "loading data\n";
 
 		// Read all the DICOM files in the specified directory.
@@ -332,7 +368,7 @@ public:
 		slider_arr[plane_idx]->setRange(0, dims[map[plane_idx]] - 1);
 
 		cout << "finished loading data\n\n";
-		is_data_loaded = true;
+		is_data1_loaded = true;
 
 	}
 
@@ -341,7 +377,7 @@ public:
 	*/
 	void load_DICOM_volume(QDir dicom_dir) {
 
-		is_data_loaded = false;
+		is_data1_loaded = false;
 		cout << "loading data\n";
 
 		//QDir dicom_dir = choose_directory();
@@ -396,27 +432,33 @@ public:
 		window_arr[0]->Render();
 
 		cout << "finished loading data\n";
-		is_data_loaded = true;
+		is_data1_loaded = true;
 	}
 
 public slots:
 
 
-	void load_DICOM() {
+	void load_dset1() {
 
 		// QDir dicom_dir = choose_directory();
-		QDir dicom_dir = QDir("../data/subset");
+		QDir dicom_dir = QDir("../data/VHF-Pelvis");
 
 		load_DICOM_image(dicom_dir, AXIAL);
 		load_DICOM_image(dicom_dir, CORONAL);
 		load_DICOM_image(dicom_dir, SAGITTAL);
 		load_DICOM_volume(dicom_dir);
+
+		col0_heading->setText("Dataset 1: " + dicom_dir.dirName());
+	}
+
+	void load_dset2() {
+		return;
 	}
 
 
-	void slider_changed(int value) {
+	void slice_slider_changed(int value) {
 
-		if (!is_data_loaded) {
+		if (!is_data1_loaded) {
 			cout << "data not loaded yet!\n";
 			return;
 		}
@@ -438,12 +480,45 @@ public slots:
 		reslice_arr[plane_idx]->Modified();
 
 		// Update the slice label
-		slider_label_arr[plane_idx]->setText(QString::number(value));
+		slider_label_arr[plane_idx]->setText(
+			slice_label_texts[plane_idx] + QString::number(value)
+		);
 
 		// Re-render the image data
 		window_arr[plane_idx]->Render();
 
+	}
 
+	void opacity_slider_changed(int value) {
+
+
+		QObject* caller = sender();
+
+		if (caller == opacity_slider0) {
+			if (!is_data1_loaded) {
+				cout << "dset1 not loaded yet!\n";
+				return;
+			
+			}
+			opacity_label0->setText("Opacity: " + QString::number(value));
+
+			// change opacity for all image/slice actors
+			for (int i = 1; i < NUM_VIEWPORTS; i++) {
+				double opacity = ((double) value)/100;
+				cout << std::to_string(opacity);
+				iactor_arr[i]->SetOpacity(opacity);
+				window_arr[i]->Render();
+			}
+		}
+
+		else if (caller == opacity_slider1) {
+			if (!is_data2_loaded) {
+				cout << "dset2 not loaded yet!\n";
+				return;
+			}
+
+			opacity_label1->setText("Opacity: " + QString::number(value));
+		}
 	}
 
 };

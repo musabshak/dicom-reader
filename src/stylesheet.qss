@@ -33,6 +33,7 @@ QMenuBar
 	background-color: transparent;
 	color: white;
 	border-color: #051a39;
+	margin: 0px;
 
 }
 
@@ -257,8 +258,7 @@ QLabel
 {
 	background-color: white;
 	color: black;
-	border-radius: 5px;
-
+	border-radius: 3px;
 }
 
 
@@ -269,12 +269,12 @@ QLabel::disabled
 
 }
 
-QLabel#transparency_label0 {
+QLabel#opacity_label0 {
 	background-color: transparent;
 	color: white;
 }
 
-QLabel#transparency_label1 {
+QLabel#opacity_label1 {
 	background-color: transparent;
 	color: white;
 }
@@ -283,12 +283,12 @@ QLabel#col0_heading {
 	background-color: transparent;
 	color: white;
 	font: bold;
-	font-size: 15px;
+	font-size: 13px;
 }
 
 QLabel#col1_heading {
 	background-color: transparent;
 	color: white;
 	font: bold;
-	font-size: 15px;
+	font-size: 13px;
 }
