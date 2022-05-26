@@ -224,8 +224,8 @@ public:
 		color_combobox1->addItem("color map 3");
 
 		// initialize colormap combobox labels
-		QLabel* color_combobox_label0 = new QLabel("Color Map:");
-		QLabel* color_combobox_label1 = new QLabel("Color Map:");
+		QLabel* color_combobox_label0 = new QLabel("Volume Color Map:");
+		QLabel* color_combobox_label1 = new QLabel("Volume Color Map:");
 
 
 
@@ -275,8 +275,11 @@ public:
 		layout_col0->addWidget(col0_heading, Qt::AlignCenter);
 		layout_col0->addLayout(layout_opacity_row0);
 		layout_col0->addLayout(layout_combobox_row0);
+		layout_opacity_row0->addStretch();
 		layout_opacity_row0->addWidget(opacity_label0);
 		layout_opacity_row0->addWidget(opacity_slider0);
+		layout_opacity_row0->addStretch();
+		layout_combobox_row0->addStretch();
 		layout_combobox_row0->addWidget(color_combobox_label0);
 		layout_combobox_row0->addWidget(color_combobox0);
 		layout_combobox_row0->addStretch();
@@ -284,8 +287,11 @@ public:
 		layout_col1->addWidget(col1_heading, Qt::AlignCenter);
 		layout_col1->addLayout(layout_opacity_row1);
 		layout_col1->addLayout(layout_combobox_row1);
+		layout_opacity_row1->addStretch();
 		layout_opacity_row1->addWidget(opacity_label1);
 		layout_opacity_row1->addWidget(opacity_slider1);
+		layout_opacity_row1->addStretch();
+		layout_combobox_row1->addStretch();
 		layout_combobox_row1->addWidget(color_combobox_label1);
 		layout_combobox_row1->addWidget(color_combobox1);
 		layout_combobox_row1->addStretch();
@@ -362,7 +368,7 @@ public:
 	}
 
 	/*
-	Used to render slices of the DICOM data. 
+	Used to render slices of the DICOM data.
 
 	Args:
 		dset_num: (int) either 1 or 2 (indicate whether loading dset1 or dset2)
@@ -396,9 +402,9 @@ public:
 
 
 		// S================== VTK PIPELINE =================== //
-		
+
 		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
-		
+
 		// TODO: figure out a better way to convert QString to a char * to pass to SetDirectoryName
 		reader->SetDirectoryName(dicom_dir.absolutePath().toStdString().c_str());
 		reader->Update(); // Force update, since we need to get information about the data dimensions
@@ -408,9 +414,9 @@ public:
 
 		// Create local pointers to reslice_arr and iactor_arr. Then, based on whether dset1 or dset2 
 		// is being loaded, set these pointers appropriately (dset2 uses separate reslice and actor objects).
-		vtkSmartPointer<vtkImageReslice> *curr_reslice_arr;
-		vtkSmartPointer<vtkImageActor> *curr_iactor_arr;
-		
+		vtkSmartPointer<vtkImageReslice>* curr_reslice_arr;
+		vtkSmartPointer<vtkImageActor>* curr_iactor_arr;
+
 		// maps plane_idx to the "missing" axis ( e.g. axial (plane_idx=1) misses z (2) )
 		int map[] = { -1, 2, 1, 0 };
 
@@ -584,15 +590,15 @@ public:
 		}
 	}
 
-	
+
 
 public slots:
 
 
 	void load_dset1() {
 
-		 //QDir dicom_dir = choose_directory();
-		QDir dicom_dir = QDir("../data/complete");
+		QDir dicom_dir = choose_directory();
+		//QDir dicom_dir = QDir("../data/hw2-dataset");
 
 		load_DICOM_image(dicom_dir, AXIAL, 1);
 		load_DICOM_image(dicom_dir, CORONAL, 1);
@@ -604,16 +610,16 @@ public slots:
 		for (int i = 1; i < NUM_VIEWPORTS; i++) {
 			slider_arr[i]->setValue(0);
 		}
-		
+
 		opacity_label0->setText("Slice Opacity: 100");
-		opacity_slider0->setValue(100); 
+		opacity_slider0->setValue(100);
 
 	}
 
 	void load_dset2() {
 
-		//QDir dicom_dir = choose_directory();
-		QDir dicom_dir = QDir("../data/VHF-Pelvis");
+		QDir dicom_dir = choose_directory();
+		//QDir dicom_dir = QDir("../data/VHF-Pelvis");
 
 		load_DICOM_image(dicom_dir, AXIAL, 2);
 		load_DICOM_image(dicom_dir, CORONAL, 2);
@@ -622,8 +628,8 @@ public slots:
 
 		// ==== Restore UI elements to default positions after loading data 
 		// (useful in case user messed with UI elements before loading data)
-		opacity_label1->setText("Slice Opacity: " + QString::number(DSET2_OPACITY*100));
-		opacity_slider1->setValue(DSET2_OPACITY * 100); 
+		opacity_label1->setText("Slice Opacity: " + QString::number(DSET2_OPACITY * 100));
+		opacity_slider1->setValue(DSET2_OPACITY * 100);
 	}
 
 
@@ -661,7 +667,7 @@ public slots:
 	}
 
 	/*
-	Defines behavior for when opacity slider values are changed by dragging the slider. 
+	Defines behavior for when opacity slider values are changed by dragging the slider.
 	Note that each of dset1 and dset2 have their own opacity slider. This fxn is called
 	when either of the two sliders are changed. The caller slider is checked, and based on
 	the caller, the appropriate ImageActor's opacity is changed:
@@ -669,7 +675,7 @@ public slots:
 		ImageActor->SetOpacity(0.5);
 
 	As usual, the appropriate VTKWindow needs to be re-rendered:
-		
+
 		VtkWindow->Render();
 	*/
 	void opacity_slider_changed(int value) {
