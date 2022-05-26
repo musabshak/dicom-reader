@@ -50,6 +50,8 @@ public:
 	int CORONAL = 2;  // x-z (setElement is 1,3)
 	int SAGITTAL = 3; // -yz (setElement is 0,1)
 
+	double DSET2_OPACITY = 0.7;
+
 	static const int NUM_VIEWPORTS = 4;
 
 	char slice_label_texts[4][50] = {
@@ -200,7 +202,7 @@ public:
 		opacity_slider1 = new QSlider();
 		opacity_slider1->setOrientation(Qt::Horizontal);
 		opacity_slider1->setRange(0, 100);
-		opacity_slider1->setValue(100);
+		opacity_slider1->setValue(70);
 
 
 
@@ -423,6 +425,9 @@ public:
 
 			// Connect the reslice filter to the mapper
 			curr_iactor_arr[plane_idx]->GetMapper()->SetInputConnection(imapper->GetOutputPort());
+
+			// set default opacity for dset2 slices
+			curr_iactor_arr[plane_idx]->SetOpacity(DSET2_OPACITY);
 		}
 		else {
 			// Connect the reslice filter to the mapper
@@ -441,6 +446,7 @@ public:
 		// Ensure we aren't clipping any of the image (cameras have a front and back plane that 
 		// clips for performance)
 		renderer_arr[plane_idx]->ResetCameraClippingRange();
+		renderer_arr[plane_idx]->ResetCamera();
 
 		cout << "finished loading data\n\n";
 
@@ -548,7 +554,7 @@ public slots:
 		load_DICOM_image(dicom_dir, SAGITTAL, 2);
 		//load_DICOM_volume(dicom_dir);
 
-		opacity_label1->setText("Slice Opacity: 100");
+		opacity_label1->setText("Slice Opacity: 70");
 	}
 
 
