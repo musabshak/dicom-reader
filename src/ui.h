@@ -338,6 +338,7 @@ public:
 	*/
 	void load_DICOM_image(QDir dicom_dir, int plane_idx, int dset_num) {
 
+		// S================== CHECK ARGUMENTS =================== //
 		// rmb, 0 is a dummy idx to account for the volume viewport
 		if (plane_idx == 0) {
 			cout << "umm plane_idx should never be 0\n";
@@ -350,31 +351,26 @@ public:
 			return;
 		}
 		cout << "loading data\n";
+		// E================== CHECK ARGUMENTS =================== //
 
 
-		// Read all the DICOM files in the specified directory.
-		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
-
+		// S================== VTK PIPELINE =================== //
 		
-
+		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
+		
 		// TODO: figure out a better way to convert QString to a char * to pass to SetDirectoryName
 		reader->SetDirectoryName(dicom_dir.absolutePath().toStdString().c_str());
-
-		// Force update, since we need to get information about the data dimensions
-		reader->Update();
+		reader->Update(); // Force update, since we need to get information about the data dimensions
 
 		int* dims = reader->GetOutput()->GetDimensions(); // Get the data dimensions
 		double* range = reader->GetOutput()->GetScalarRange(); // Get the range of intensity values
 
-		
-
-		// Create current pointers to VTK stuff. Then, based on whether dset1 or dset 2 
-		// is being loaded, set these pointers appropriately. Only need to do this for the
-		// VTK stuff that is created a new for dset2 (reslice_arr2, iactor_arr2).
+		// Create local pointers to reslice_arr and iactor_arr. Then, based on whether dset1 or dset2 
+		// is being loaded, set these pointers appropriately (dset2 uses separate reslice and actor objects).
 		vtkSmartPointer<vtkImageReslice> *curr_reslice_arr;
 		vtkSmartPointer<vtkImageActor> *curr_iactor_arr;
 		
-		// maps plane_idx to the "missing" axis
+		// maps plane_idx to the "missing" axis ( e.g. axial (plane_idx=1) misses z (2) )
 		int map[] = { -1, 2, 1, 0 };
 
 		if (dset_num == 1) {
@@ -382,7 +378,7 @@ public:
 			curr_iactor_arr = iactor_arr;
 			is_data1_loaded = false;
 
-			// Tell our slider widget what the min/max slice numbers are
+			// Tell our slice slider widget what the min/max slice numbers are (only once, for dset1)
 			slider_arr[plane_idx]->setRange(0, dims[map[plane_idx]] - 1);
 		}
 		else {
@@ -395,8 +391,6 @@ public:
 		// image actors have a default mapper we can use as is if we don't want to change 
 		// the colormap etc.
 		curr_iactor_arr[plane_idx] = vtkSmartPointer<vtkImageActor>::New();
-
-		
 
 		// vtkImageReslice is the filter that does the slicing (slices a 3D dataset to become 2D)
 		curr_reslice_arr[plane_idx] = vtkSmartPointer<vtkImageReslice>::New();
@@ -423,21 +417,21 @@ public:
 			imapper->SetInputConnection(curr_reslice_arr[plane_idx]->GetOutputPort());
 			imapper->Update();
 
-			// Connect the reslice filter to the mapper
+			// VTKMapper -> VTKImageActor
 			curr_iactor_arr[plane_idx]->GetMapper()->SetInputConnection(imapper->GetOutputPort());
 
 			// set default opacity for dset2 slices
 			curr_iactor_arr[plane_idx]->SetOpacity(DSET2_OPACITY);
 		}
 		else {
-			// Connect the reslice filter to the mapper
+			// VTKImageReslice -> VTKImageActor
 			curr_iactor_arr[plane_idx]->GetMapper()->SetInputConnection(curr_reslice_arr[plane_idx]->GetOutputPort());
 		}
 
-		// Renderer (initialized in constructor)
+		// VTKImageActor -> VTKRenderer (initialized in constructor)
 		renderer_arr[plane_idx]->AddActor(curr_iactor_arr[plane_idx]); // Add the actor to the renderer
 
-		// Add the renderer to the render window
+		// VTKRenderer > VTKOpenGLRenderWindow
 		window_arr[plane_idx]->AddRenderer(renderer_arr[plane_idx]);
 
 		// Render (display the image)
@@ -462,7 +456,14 @@ public:
 	/*
 	Render DICOM as volume
 	*/
-	void load_DICOM_volume(QDir dicom_dir) {
+	void load_DICOM_volume(QDir dicom_dir, int dset_num) {
+
+		// sanity checking input
+		if (!(dset_num == 1 || dset_num == 2)) {
+			cout << "umm dset_num should be 1 or 2";
+			return;
+		}
+		cout << "loading data\n";
 
 		is_data1_loaded = false;
 		cout << "loading data\n";
@@ -534,27 +535,28 @@ public slots:
 	void load_dset1() {
 
 		 //QDir dicom_dir = choose_directory();
-		QDir dicom_dir = QDir("../data/VHF-Pelvis");
+		QDir dicom_dir = QDir("../data/complete");
 
 		load_DICOM_image(dicom_dir, AXIAL, 1);
 		load_DICOM_image(dicom_dir, CORONAL, 1);
 		load_DICOM_image(dicom_dir, SAGITTAL, 1);
-		load_DICOM_volume(dicom_dir);
+		load_DICOM_volume(dicom_dir, 1);
 
 		opacity_label0->setText("Slice Opacity: 100");
 
 	}
 
 	void load_dset2() {
+
 		//QDir dicom_dir = choose_directory();
-		QDir dicom_dir = QDir("../data/complete");
+		QDir dicom_dir = QDir("../data/VHF-Pelvis");
 
 		load_DICOM_image(dicom_dir, AXIAL, 2);
 		load_DICOM_image(dicom_dir, CORONAL, 2);
 		load_DICOM_image(dicom_dir, SAGITTAL, 2);
-		//load_DICOM_volume(dicom_dir);
+		load_DICOM_volume(dicom_dir, 2);
 
-		opacity_label1->setText("Slice Opacity: 70");
+		opacity_label1->setText("Slice Opacity: " + QString::number(DSET2_OPACITY*100));
 	}
 
 
@@ -565,7 +567,7 @@ public slots:
 			return;
 		}
 
-		QObject* caller = sender();
+		QObject* caller = sender(); // determine axial/coronal/sagittal slice
 		int plane_idx;
 
 		if (caller == slider_arr[AXIAL])
@@ -591,10 +593,22 @@ public slots:
 
 	}
 
+	/*
+	Defines behavior for when opacity slider values are changed by dragging the slider. 
+	Note that each of dset1 and dset2 have their own opacity slider. This fxn is called
+	when either of the two sliders are changed. The caller slider is checked, and based on
+	the caller, the appropriate ImageActor's opacity is changed:
+
+		ImageActor->SetOpacity(0.5);
+
+	As usual, the appropriate VTKWindow needs to be re-rendered:
+		
+		VtkWindow->Render();
+	*/
 	void opacity_slider_changed(int value) {
 
 
-		QObject* caller = sender();
+		QObject* caller = sender(); // determine dset1/dset2 opacity slider
 
 		if (caller == opacity_slider0) {
 			if (!is_data1_loaded) {
