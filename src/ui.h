@@ -19,6 +19,9 @@
 #include <vtkPiecewiseFunction.h>
 #include <vtkColorTransferFunction.h>
 #include <vtkVolumeProperty.h>
+#include <vtkImageMapper3D.h>
+#include <vtkLookupTable.h>
+#include <vtkImageMapToColors.h>
 
 // Qt header files
 #include <QMainWindow.h>
@@ -80,6 +83,10 @@ public:
 	vtkSmartPointer<vtkImageActor> iactor_arr[NUM_VIEWPORTS];
 	vtkSmartPointer<vtkRenderer> renderer_arr[NUM_VIEWPORTS];
 
+	// for dataset 2
+	vtkSmartPointer<vtkImageReslice> reslice_arr2[NUM_VIEWPORTS];
+	vtkSmartPointer<vtkImageActor> iactor_arr2[NUM_VIEWPORTS];
+
 	bool is_data1_loaded = false;
 	bool is_data2_loaded = false;
 
@@ -113,8 +120,8 @@ public:
 		// S==================== METADATA ==================== //
 
 		// Resize the window, set the title
-		this->resize(1200, 400);
 		this->setWindowTitle("DICOM Reader");
+		this->setGeometry(35, 35, 1200, 400);
 
 
 
@@ -153,15 +160,20 @@ public:
 		for (int i = 1; i < NUM_VIEWPORTS; i++) {
 			slider_arr[i] = new QSlider();
 			slider_arr[i]->setOrientation(Qt::Vertical);
-		}
 
-		// initialize slice labels for the 3 planes
-		for (int i = 1; i < NUM_VIEWPORTS; i++) {
+			// initialize the slice renderers
+			renderer_arr[i] = vtkSmartPointer<vtkRenderer>::New();
+
+			// initialize the reslice_axes
+			reslice_axes_arr[i] = vtkSmartPointer<vtkMatrix4x4>::New();
+			reslice_axes_arr[i]->DeepCopy(plane_arr[i]);
+
+			// initialize slice labels for the 3 planes
 			slider_label_arr[i] = new QLabel(slice_label_texts[i]);
-			//slider_label_arr[i]->setFixedSize(60, 20);
 			slider_label_arr[i]->setAlignment(Qt::AlignCenter);
 			slider_label_arr[i]->setStyleSheet("padding: 2px");
 		}
+
 
 		// dataset header labels
 		col0_heading = new QLabel("Dataset 1: <no data loaded>");
@@ -173,10 +185,10 @@ public:
 		col1_heading->setAlignment(Qt::AlignCenter);
 
 		// initialize opacity slider labels
-		opacity_label0 = new QLabel("Opacity: 100");
+		opacity_label0 = new QLabel("Slice Opacity: -");
 		opacity_label0->setObjectName("opacity_label0");
 
-		opacity_label1 = new QLabel("Opacity: 100");
+		opacity_label1 = new QLabel("Slice Opacity: -");
 		opacity_label1->setObjectName("opacity_label1");
 
 		// initialize opacity sliders
@@ -306,7 +318,23 @@ public:
 
 	}
 
-	void load_DICOM_image(QDir dicom_dir, int plane_idx) {
+	/*
+	Used to render slices of the DICOM data. 
+
+	Args:
+		dset_num: (int) either 1 or 2 (indicate whether loading dset1 or dset2)
+
+	if dset_num = 2 then the following is a list of reused/new VTK pointers
+	(new)
+	- reslice_arr2
+	- iactor_arr2
+
+	(old)
+	- reslice_axes_arr
+	- renderer_arr
+	- window_arr
+	*/
+	void load_DICOM_image(QDir dicom_dir, int plane_idx, int dset_num) {
 
 		// rmb, 0 is a dummy idx to account for the volume viewport
 		if (plane_idx == 0) {
@@ -314,11 +342,18 @@ public:
 			return;
 		}
 
-		is_data1_loaded = false;
+		// sanity checking input
+		if (!(dset_num == 1 || dset_num == 2)) {
+			cout << "umm dset_num should be 1 or 2";
+			return;
+		}
 		cout << "loading data\n";
+
 
 		// Read all the DICOM files in the specified directory.
 		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
+
+		
 
 		// TODO: figure out a better way to convert QString to a char * to pass to SetDirectoryName
 		reader->SetDirectoryName(dicom_dir.absolutePath().toStdString().c_str());
@@ -329,28 +364,73 @@ public:
 		int* dims = reader->GetOutput()->GetDimensions(); // Get the data dimensions
 		double* range = reader->GetOutput()->GetScalarRange(); // Get the range of intensity values
 
-		reslice_axes_arr[plane_idx] = vtkSmartPointer<vtkMatrix4x4>::New();
-		reslice_axes_arr[plane_idx]->DeepCopy(plane_arr[plane_idx]);
+		
 
-		// vtkImageReslice is the filter that does the slicing (slices a 3D dataset to become 2D)
-		reslice_arr[plane_idx] = vtkSmartPointer<vtkImageReslice>::New();
-		reslice_arr[plane_idx]->SetInputConnection(reader->GetOutputPort()); // connect the reader to this filter
-		reslice_arr[plane_idx]->SetOutputDimensionality(2);
-		reslice_arr[plane_idx]->SetResliceAxes(reslice_axes_arr[plane_idx]); // tell it what plane to slice with
-		reslice_arr[plane_idx]->SetInterpolationModeToLinear();
-		reslice_arr[plane_idx]->Update();
+		// Create current pointers to VTK stuff. Then, based on whether dset1 or dset 2 
+		// is being loaded, set these pointers appropriately. Only need to do this for the
+		// VTK stuff that is created a new for dset2 (reslice_arr2, iactor_arr2).
+		vtkSmartPointer<vtkImageReslice> *curr_reslice_arr;
+		vtkSmartPointer<vtkImageActor> *curr_iactor_arr;
+		
+		// maps plane_idx to the "missing" axis
+		int map[] = { -1, 2, 1, 0 };
+
+		if (dset_num == 1) {
+			curr_reslice_arr = reslice_arr;
+			curr_iactor_arr = iactor_arr;
+			is_data1_loaded = false;
+
+			// Tell our slider widget what the min/max slice numbers are
+			slider_arr[plane_idx]->setRange(0, dims[map[plane_idx]] - 1);
+		}
+		else {
+			curr_reslice_arr = reslice_arr2;
+			curr_iactor_arr = iactor_arr2;
+			is_data2_loaded = false;
+		}
 
 		// Create an actor for the image. You'll notice we skipped the mapper step. This is because
 		// image actors have a default mapper we can use as is if we don't want to change 
 		// the colormap etc.
-		iactor_arr[plane_idx] = vtkSmartPointer<vtkImageActor>::New();
+		curr_iactor_arr[plane_idx] = vtkSmartPointer<vtkImageActor>::New();
 
-		// Connect the reslice filter to the mapper
-		iactor_arr[plane_idx]->GetMapper()->SetInputConnection(reslice_arr[plane_idx]->GetOutputPort());
+		
 
-		// Renderer
-		renderer_arr[plane_idx] = vtkSmartPointer<vtkRenderer>::New();
-		renderer_arr[plane_idx]->AddActor(iactor_arr[plane_idx]); // Add the actor to the renderer
+		// vtkImageReslice is the filter that does the slicing (slices a 3D dataset to become 2D)
+		curr_reslice_arr[plane_idx] = vtkSmartPointer<vtkImageReslice>::New();
+		curr_reslice_arr[plane_idx]->SetInputConnection(reader->GetOutputPort()); // connect the reader to this filter
+		curr_reslice_arr[plane_idx]->SetOutputDimensionality(2);
+		curr_reslice_arr[plane_idx]->SetResliceAxes(reslice_axes_arr[plane_idx]); // tell it what plane to slice with
+		curr_reslice_arr[plane_idx]->SetInterpolationModeToLinear();
+		curr_reslice_arr[plane_idx]->Update();
+
+		// change color map for dset2
+		if (dset_num == 2) {
+			// colormap
+			vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
+			lut->SetNumberOfColors(256);
+			lut->Build();
+			for (int i = 0; i < 256; i++)
+				lut->SetTableValue(i, (double)i / 255.0, (double)i / 255.0, (double)i / 255.0, 1.0); // value, red, green, blue, opacity
+			lut->SetRange(range);
+
+			// colormap mapper
+			vtkSmartPointer<vtkImageMapToColors> imapper = vtkSmartPointer<vtkImageMapToColors>::New();
+			imapper->PassAlphaToOutputOn();
+			imapper->SetLookupTable(lut);
+			imapper->SetInputConnection(curr_reslice_arr[plane_idx]->GetOutputPort());
+			imapper->Update();
+
+			// Connect the reslice filter to the mapper
+			curr_iactor_arr[plane_idx]->GetMapper()->SetInputConnection(imapper->GetOutputPort());
+		}
+		else {
+			// Connect the reslice filter to the mapper
+			curr_iactor_arr[plane_idx]->GetMapper()->SetInputConnection(curr_reslice_arr[plane_idx]->GetOutputPort());
+		}
+
+		// Renderer (initialized in constructor)
+		renderer_arr[plane_idx]->AddActor(curr_iactor_arr[plane_idx]); // Add the actor to the renderer
 
 		// Add the renderer to the render window
 		window_arr[plane_idx]->AddRenderer(renderer_arr[plane_idx]);
@@ -362,13 +442,14 @@ public:
 		// clips for performance)
 		renderer_arr[plane_idx]->ResetCameraClippingRange();
 
-		int map[] = { -1, 2, 1, 0 };
-
-		// Tell our slider widget what the min/max slice numbers are
-		slider_arr[plane_idx]->setRange(0, dims[map[plane_idx]] - 1);
-
 		cout << "finished loading data\n\n";
-		is_data1_loaded = true;
+
+		if (dset_num == 1) {
+			is_data1_loaded = true;
+		}
+		else {
+			is_data2_loaded = true;
+		}
 
 	}
 
@@ -385,12 +466,16 @@ public:
 		// Read all the DICOM files in the specified directory.
 		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
 
+		
 		// TODO: figure out a better way to convert QString to a char * to pass to SetDirectoryName
 		reader->SetDirectoryName(dicom_dir.absolutePath().toStdString().c_str());
 
 		// Force update, since we need to get information about the data dimensions
 		reader->Update();
 
+		// display patient name in GUI
+		col0_heading->setText("Dataset 1: " + QString(reader->GetPatientName()));
+		 
 		/* Code taken from in-class example */
 		// volume mapper
 		vtkSmartPointer<vtkSmartVolumeMapper> volumeMapper = vtkSmartPointer<vtkSmartVolumeMapper>::New();
@@ -435,24 +520,35 @@ public:
 		is_data1_loaded = true;
 	}
 
+	
+
 public slots:
 
 
 	void load_dset1() {
 
-		// QDir dicom_dir = choose_directory();
+		 //QDir dicom_dir = choose_directory();
 		QDir dicom_dir = QDir("../data/VHF-Pelvis");
 
-		load_DICOM_image(dicom_dir, AXIAL);
-		load_DICOM_image(dicom_dir, CORONAL);
-		load_DICOM_image(dicom_dir, SAGITTAL);
+		load_DICOM_image(dicom_dir, AXIAL, 1);
+		load_DICOM_image(dicom_dir, CORONAL, 1);
+		load_DICOM_image(dicom_dir, SAGITTAL, 1);
 		load_DICOM_volume(dicom_dir);
 
-		col0_heading->setText("Dataset 1: " + dicom_dir.dirName());
+		opacity_label0->setText("Slice Opacity: 100");
+
 	}
 
 	void load_dset2() {
-		return;
+		//QDir dicom_dir = choose_directory();
+		QDir dicom_dir = QDir("../data/complete");
+
+		load_DICOM_image(dicom_dir, AXIAL, 2);
+		load_DICOM_image(dicom_dir, CORONAL, 2);
+		load_DICOM_image(dicom_dir, SAGITTAL, 2);
+		//load_DICOM_volume(dicom_dir);
+
+		opacity_label1->setText("Slice Opacity: 100");
 	}
 
 
@@ -498,13 +594,13 @@ public slots:
 			if (!is_data1_loaded) {
 				cout << "dset1 not loaded yet!\n";
 				return;
-			
+
 			}
-			opacity_label0->setText("Opacity: " + QString::number(value));
+			opacity_label0->setText("Slice Opacity: " + QString::number(value));
 
 			// change opacity for all image/slice actors
 			for (int i = 1; i < NUM_VIEWPORTS; i++) {
-				double opacity = ((double) value)/100;
+				double opacity = ((double)value) / 100;
 				cout << std::to_string(opacity);
 				iactor_arr[i]->SetOpacity(opacity);
 				window_arr[i]->Render();
@@ -515,9 +611,17 @@ public slots:
 			if (!is_data2_loaded) {
 				cout << "dset2 not loaded yet!\n";
 				return;
-			}
 
-			opacity_label1->setText("Opacity: " + QString::number(value));
+			}
+			opacity_label1->setText("Slice Opacity: " + QString::number(value));
+
+			// change opacity for all image/slice actors
+			for (int i = 1; i < NUM_VIEWPORTS; i++) {
+				double opacity = ((double)value) / 100;
+				cout << std::to_string(opacity);
+				iactor_arr2[i]->SetOpacity(opacity);
+				window_arr[i]->Render();
+			}
 		}
 	}
 
