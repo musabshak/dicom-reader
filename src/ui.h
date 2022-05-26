@@ -557,6 +557,7 @@ public slots:
 		load_DICOM_volume(dicom_dir, 1);
 
 		opacity_label0->setText("Slice Opacity: 100");
+		opacity_slider0->setValue(100); // in case user messed with slider before loading data
 
 	}
 
@@ -571,6 +572,7 @@ public slots:
 		load_DICOM_volume(dicom_dir, 2);
 
 		opacity_label1->setText("Slice Opacity: " + QString::number(DSET2_OPACITY*100));
+		opacity_slider0->setValue(DSET2_OPACITY * 100); 
 	}
 
 
