@@ -156,15 +156,15 @@ public:
 			// set a minimum size for the viewports
 			viewport_arr[i]->setMinimumSize(400, 400);
 
+			// initialize the vol + slice renderers
+			renderer_arr[i] = vtkSmartPointer<vtkRenderer>::New();
+
 		}
 
 		// initialize sliders for each of the 3 slice planes
 		for (int i = 1; i < NUM_VIEWPORTS; i++) {
 			slider_arr[i] = new QSlider();
 			slider_arr[i]->setOrientation(Qt::Vertical);
-
-			// initialize the slice renderers
-			renderer_arr[i] = vtkSmartPointer<vtkRenderer>::New();
 
 			// initialize the reslice_axes
 			reslice_axes_arr[i] = vtkSmartPointer<vtkMatrix4x4>::New();
@@ -463,27 +463,36 @@ public:
 			cout << "umm dset_num should be 1 or 2";
 			return;
 		}
+
 		cout << "loading data\n";
 
-		is_data1_loaded = false;
-		cout << "loading data\n";
-
-		//QDir dicom_dir = choose_directory();
+		if (dset_num == 1) {
+			is_data1_loaded = false;
+		}
+		else {
+			is_data2_loaded = false;
+		}
 
 		// Read all the DICOM files in the specified directory.
 		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
-
-		
-		// TODO: figure out a better way to convert QString to a char * to pass to SetDirectoryName
 		reader->SetDirectoryName(dicom_dir.absolutePath().toStdString().c_str());
+		reader->Update(); // Force update, since we need to get information about the data dimensions
 
-		// Force update, since we need to get information about the data dimensions
-		reader->Update();
+		QString dset_name;
 
-		// display patient name in GUI
-		col0_heading->setText("Dataset 1: " + QString(reader->GetPatientName()));
-		 
+		if (dset_num == 1) {
+			is_data1_loaded = false;
+			dset_name = "Dataset 1: " + QString(reader->GetPatientName());
+			col0_heading->setText(dset_name); // display patient name as dset name in GUI
+		}
+		else {
+			is_data2_loaded = false;
+			dset_name = "Dataset 2: " + QString(reader->GetPatientName());
+			col1_heading->setText(dset_name);
+		}
+
 		/* Code taken from in-class example */
+
 		// volume mapper
 		vtkSmartPointer<vtkSmartVolumeMapper> volumeMapper = vtkSmartPointer<vtkSmartVolumeMapper>::New();
 		volumeMapper->SetBlendModeToComposite(); // composite
@@ -509,22 +518,27 @@ public:
 		color->AddRGBPoint(555.0, 1.0, 1.0, 1.0);
 		volumeProperty->SetColor(color);
 
-		// create volume using the volume mapper and volume properties
+		// VolumeMapper, VolumeProperty -> Volume
 		vtkSmartPointer<vtkVolume> volume = vtkSmartPointer<vtkVolume>::New();
 		volume->SetMapper(volumeMapper);
 		volume->SetProperty(volumeProperty);
 
-		// renderer
-		vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
-		renderer->AddViewProp(volume);
-		renderer->ResetCamera();
+		// Volume -> Renderer
+		renderer_arr[0]->AddViewProp(volume);
+		renderer_arr[0]->ResetCamera();
 
-		// render window
-		window_arr[0]->AddRenderer(renderer);
+		// Renderer -> VTKOpenGLRenderWindow
+		window_arr[0]->AddRenderer(renderer_arr[0]);
 		window_arr[0]->Render();
 
 		cout << "finished loading data\n";
-		is_data1_loaded = true;
+
+		if (dset_num == 1) {
+			is_data1_loaded = true;
+		}
+		else {
+			is_data2_loaded = true;
+		}
 	}
 
 	
