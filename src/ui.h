@@ -127,7 +127,9 @@ public:
 
 		// Resize the window, set the title
 		this->setWindowTitle("DICOM Reader");
-		this->setGeometry(35, 35, 1200, 400);
+		//this->setGeometry(35, 35, 1200, 900);
+		this->setWindowState(Qt::WindowMaximized);
+		this->setMinimumSize(1200, 900);
 
 
 
@@ -137,6 +139,7 @@ public:
 
 		// Create the "central" (primary) widget for the window
 		QWidget* widget = new QWidget();
+		widget->setObjectName("central_widget");
 
 		// Add two menu itmes to QMainWindow's in-built menu bar 
 		QAction* load_dset1_action = new QAction("Load DICOM dataset 1");
@@ -177,7 +180,9 @@ public:
 			// initialize slice labels for the 3 planes
 			slider_label_arr[i] = new QLabel(slice_label_texts[i]);
 			slider_label_arr[i]->setAlignment(Qt::AlignCenter);
-			slider_label_arr[i]->setStyleSheet("padding: 2px");
+			slider_label_arr[i]->setStyleSheet(
+				"padding: 2px; background-color: white; color: black; border-radius:3px"
+			);
 		}
 
 
@@ -192,10 +197,8 @@ public:
 
 		// initialize opacity slider labels
 		opacity_label0 = new QLabel("Slice Opacity: -");
-		opacity_label0->setObjectName("opacity_label0");
 
 		opacity_label1 = new QLabel("Slice Opacity: -");
-		opacity_label1->setObjectName("opacity_label1");
 
 		// initialize opacity sliders
 		opacity_slider0 = new QSlider();
@@ -210,10 +213,19 @@ public:
 
 		// initialize colormap comboboxes
 		color_combobox0 = new QComboBox();
-
+		color_combobox0->addItem("color map 1");
+		color_combobox0->addItem("color map 2");
+		color_combobox0->addItem("color map 3");
 
 
 		color_combobox1 = new QComboBox();
+		color_combobox1->addItem("color map 1");
+		color_combobox1->addItem("color map 2");
+		color_combobox1->addItem("color map 3");
+
+		// initialize colormap combobox labels
+		QLabel* color_combobox_label0 = new QLabel("Color Map:");
+		QLabel* color_combobox_label1 = new QLabel("Color Map:");
 
 
 
@@ -229,7 +241,15 @@ public:
 		QVBoxLayout* layout_col0 = new QVBoxLayout();
 		QVBoxLayout* layout_col1 = new QVBoxLayout();
 
-		QVBoxLayout* layout_slice_label_arr[4];
+		// 2 horizontal layouts for opacity slider rows
+		QHBoxLayout* layout_opacity_row0 = new QHBoxLayout();
+		QHBoxLayout* layout_opacity_row1 = new QHBoxLayout();
+
+		// 2 horizontal layouts for color combobx rows
+		QHBoxLayout* layout_combobox_row0 = new QHBoxLayout();
+		QHBoxLayout* layout_combobox_row1 = new QHBoxLayout();
+
+		QVBoxLayout* layout_slice_label_arr[NUM_VIEWPORTS];
 
 		// initialize layouts for slice labels for the 3 planes
 		for (int i = 1; i < NUM_VIEWPORTS; i++) {
@@ -250,19 +270,28 @@ public:
 		// populate row0
 		layout_row0->addLayout(layout_col0);
 		layout_row0->addLayout(layout_col1);
-		layout_row0->addSpacing(15);
 
 		// populate col0, col1
 		layout_col0->addWidget(col0_heading, Qt::AlignCenter);
-		layout_col0->addWidget(opacity_label0);
-		layout_col0->addWidget(opacity_slider0);
+		layout_col0->addLayout(layout_opacity_row0);
+		layout_col0->addLayout(layout_combobox_row0);
+		layout_opacity_row0->addWidget(opacity_label0);
+		layout_opacity_row0->addWidget(opacity_slider0);
+		layout_combobox_row0->addWidget(color_combobox_label0);
+		layout_combobox_row0->addWidget(color_combobox0);
+		layout_combobox_row0->addStretch();
 
 		layout_col1->addWidget(col1_heading, Qt::AlignCenter);
-		layout_col1->addWidget(opacity_label1);
-		layout_col1->addWidget(opacity_slider1);
+		layout_col1->addLayout(layout_opacity_row1);
+		layout_col1->addLayout(layout_combobox_row1);
+		layout_opacity_row1->addWidget(opacity_label1);
+		layout_opacity_row1->addWidget(opacity_slider1);
+		layout_combobox_row1->addWidget(color_combobox_label1);
+		layout_combobox_row1->addWidget(color_combobox1);
+		layout_combobox_row1->addStretch();
 
 		// populate row1
-		layout_row1->addSpacing(22); // no slider for volume view
+		layout_row1->addSpacing(25); // no slider for volume view
 		layout_row1->addWidget(viewport_arr[VOLUME]);
 
 		layout_row1->addWidget(slider_arr[AXIAL]);
@@ -573,7 +602,6 @@ public slots:
 		// ==== Restore UI elements to default positions after loading data 
 		// (useful in case user messed with UI elements before loading data)
 		for (int i = 1; i < NUM_VIEWPORTS; i++) {
-			slider_label_arr[i]->setText("Slice: 0");
 			slider_arr[i]->setValue(0);
 		}
 		

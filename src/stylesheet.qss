@@ -33,8 +33,6 @@ QMenuBar
 	background-color: transparent;
 	color: white;
 	border-color: #051a39;
-	margin: 0px;
-
 }
 
 
@@ -77,7 +75,6 @@ QMenu
     background-color: #121212;
     border: 1px solid;
     color: #ffffff;
-
 }
 
 
@@ -254,11 +251,10 @@ QSlider::handle:vertical:disabled
 
 }
 
-QLabel
-{
-	background-color: white;
-	color: black;
-	border-radius: 3px;
+
+QLabel {
+	background-color: transparent;
+	color: white;
 }
 
 
@@ -269,26 +265,22 @@ QLabel::disabled
 
 }
 
-QLabel#opacity_label0 {
-	background-color: transparent;
-	color: white;
-}
-
-QLabel#opacity_label1 {
-	background-color: transparent;
-	color: white;
-}
-
 QLabel#col0_heading {
-	background-color: transparent;
-	color: white;
 	font: bold;
 	font-size: 13px;
 }
 
 QLabel#col1_heading {
-	background-color: transparent;
-	color: white;
 	font: bold;
 	font-size: 13px;
+}
+
+
+
+
+QComboBox {
+    border: 1px solid gray;
+    border-radius: 3px;
+    padding: 1px 18px 1px 3px;
+    min-width: 6em;
 }
