@@ -37,6 +37,7 @@
 #include <QTextStream.h>
 #include <QMenuBar.h>
 #include <QMenu.h>
+#include <QComboBox.h>
 
 
 // Class that represents the main window for our application
@@ -85,9 +86,12 @@ public:
 	vtkSmartPointer<vtkImageActor> iactor_arr[NUM_VIEWPORTS];
 	vtkSmartPointer<vtkRenderer> renderer_arr[NUM_VIEWPORTS];
 
-	// for dataset 2
+	// vtik reslice filter, actors for dataset 2
 	vtkSmartPointer<vtkImageReslice> reslice_arr2[NUM_VIEWPORTS];
 	vtkSmartPointer<vtkImageActor> iactor_arr2[NUM_VIEWPORTS];
+
+	// colormap comboboxes
+	QComboBox* color_combobox0, * color_combobox1;
 
 	bool is_data1_loaded = false;
 	bool is_data2_loaded = false;
@@ -203,6 +207,14 @@ public:
 		opacity_slider1->setOrientation(Qt::Horizontal);
 		opacity_slider1->setRange(0, 100);
 		opacity_slider1->setValue(70);
+
+		// initialize colormap comboboxes
+		color_combobox0 = new QComboBox();
+
+
+
+		color_combobox1 = new QComboBox();
+
 
 
 
@@ -497,7 +509,9 @@ public:
 		vtkSmartPointer<vtkSmartVolumeMapper> volumeMapper = vtkSmartPointer<vtkSmartVolumeMapper>::New();
 		volumeMapper->SetBlendModeToComposite(); // composite
 		volumeMapper->SetInputConnection(reader->GetOutputPort());
-		volumeMapper->SetRequestedRenderModeToRayCast();
+		//volumeMapper->SetRequestedRenderModeToRayCast();
+		volumeMapper->SetRequestedRenderModeToGPU();
+
 
 		// volume properties
 		vtkSmartPointer<vtkVolumeProperty> volumeProperty = vtkSmartPointer<vtkVolumeProperty>::New();
@@ -556,8 +570,15 @@ public slots:
 		load_DICOM_image(dicom_dir, SAGITTAL, 1);
 		load_DICOM_volume(dicom_dir, 1);
 
+		// ==== Restore UI elements to default positions after loading data 
+		// (useful in case user messed with UI elements before loading data)
+		for (int i = 1; i < NUM_VIEWPORTS; i++) {
+			slider_label_arr[i]->setText("Slice: 0");
+			slider_arr[i]->setValue(0);
+		}
+		
 		opacity_label0->setText("Slice Opacity: 100");
-		opacity_slider0->setValue(100); // in case user messed with slider before loading data
+		opacity_slider0->setValue(100); 
 
 	}
 
@@ -571,6 +592,8 @@ public slots:
 		load_DICOM_image(dicom_dir, SAGITTAL, 2);
 		load_DICOM_volume(dicom_dir, 2);
 
+		// ==== Restore UI elements to default positions after loading data 
+		// (useful in case user messed with UI elements before loading data)
 		opacity_label1->setText("Slice Opacity: " + QString::number(DSET2_OPACITY*100));
 		opacity_slider1->setValue(DSET2_OPACITY * 100); 
 	}
