@@ -340,15 +340,17 @@ public:
 
 		// initialize colormap comboboxes
 		color_combobox0 = new QComboBox();
-		color_combobox0->addItem("color map 1");
-		color_combobox0->addItem("color map 2");
-		color_combobox0->addItem("color map 3");
+		color_combobox0->addItem("Map 1");
+		color_combobox0->addItem("Viridis");
+		color_combobox0->addItem("Magma");
+		color_combobox0->addItem("Grayscale");
 
 
 		color_combobox1 = new QComboBox();
-		color_combobox1->addItem("color map 1");
-		color_combobox1->addItem("color map 2");
-		color_combobox1->addItem("color map 3");
+		color_combobox1->addItem("Map 1");
+		color_combobox1->addItem("Viridis");
+		color_combobox1->addItem("Magma");
+		color_combobox1->addItem("Grayscale");
 
 		// initialize colormap combobox labels
 		QLabel* color_combobox_label0 = new QLabel("Volume Color Map:");
@@ -468,6 +470,12 @@ public:
 			this, SLOT(opacity_slider_changed(int)));
 		connect(opacity_slider1, SIGNAL(valueChanged(int)),
 			this, SLOT(opacity_slider_changed(int)));
+
+		// connect combo boxes
+		connect(color_combobox0, SIGNAL(currentIndexChanged(int)),
+			this, SLOT(combobox_changed(int)));
+		connect(color_combobox1, SIGNAL(currentIndexChanged(int)),
+			this, SLOT(combobox_changed(int)));
 
 		// Display the window
 		this->show();
@@ -716,10 +724,7 @@ public:
 		}
 	}
 
-
-
-public slots:
-
+	// Check that directory is valid.
 	bool is_valid(QDir dicom_dir) {
 
 
@@ -738,6 +743,10 @@ public slots:
 
 		return true;
 	}
+
+
+
+public slots:
 
 
 	void load_dset1() {
@@ -867,5 +876,11 @@ public slots:
 			}
 		}
 	}
+
+	void combobox_changed(int new_index) {
+
+	}
+
+
 
 };
