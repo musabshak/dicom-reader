@@ -131,23 +131,49 @@ public:
 	// ctfs for volume color maps
 	vtkSmartPointer<vtkColorTransferFunction> magma_ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
 	vtkSmartPointer<vtkColorTransferFunction> viridis_ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
+	vtkSmartPointer<vtkColorTransferFunction> class_example_ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
+	vtkSmartPointer<vtkColorTransferFunction> grayscale_ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
 
 	void populate_ctfs() {
 		// magma
-		magma_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
+	   /* magma_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
 		magma_ctf->AddRGBPoint(0.14, 0.094, 0.007, 0.286);
 		magma_ctf->AddRGBPoint(0.28, 0.309, 0.0, 0.478);
 		magma_ctf->AddRGBPoint(0.46, 0.576, 0.071, 0.502);
 		magma_ctf->AddRGBPoint(0.63, 0.843, 0.271, 0.384);
 		magma_ctf->AddRGBPoint(0.8, 0.976, 0.604, 0.388);
-		magma_ctf->AddRGBPoint(1.0, 0.973, 1.0, 0.729);
+		magma_ctf->AddRGBPoint(1.0, 0.973, 1.0, 0.729);*/
+		magma_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
+		magma_ctf->AddRGBPoint(100, 0.094, 0.007, 0.286);
+		magma_ctf->AddRGBPoint(150, 0.309, 0.0, 0.478);
+		magma_ctf->AddRGBPoint(350, 0.576, 0.071, 0.502);
+		magma_ctf->AddRGBPoint(400, 0.843, 0.271, 0.384);
+		magma_ctf->AddRGBPoint(500, 0.976, 0.604, 0.388);
+		magma_ctf->AddRGBPoint(550, 0.973, 1.0, 0.729);
 
 		// viridis
-		viridis_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
+		/*viridis_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
 		viridis_ctf->AddRGBPoint(0.18, 0.28, 0.035, 0.396);
 		viridis_ctf->AddRGBPoint(0.4, 0.223, 0.325, 0.556);
 		viridis_ctf->AddRGBPoint(0.7, 0.058, 0.635, 0.529);
-		viridis_ctf->AddRGBPoint(1.0, 1.0, 0.913, 0.0);
+		viridis_ctf->AddRGBPoint(1.0, 1.0, 0.913, 0.0);*/
+		viridis_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
+		viridis_ctf->AddRGBPoint(100, 0.28, 0.035, 0.396);
+		viridis_ctf->AddRGBPoint(200, 0.223, 0.325, 0.556);
+		viridis_ctf->AddRGBPoint(350, 0.058, 0.635, 0.529);
+		viridis_ctf->AddRGBPoint(500, 1.0, 0.913, 0.0);
+
+		// class_example_ctf
+		class_example_ctf->AddRGBPoint(0.0, 0.0, 0.0, 1.0);
+		class_example_ctf->AddRGBPoint(300.0, 1.0, 0.0, 0.0);
+		class_example_ctf->AddRGBPoint(555.0, 1.0, 1.0, 1.0);
+
+		// grayscale_ctf
+		grayscale_ctf->AddRGBPoint(0.0, 0.0, 0.0, 1.0);
+		grayscale_ctf->AddRGBPoint(300.0, 1.0, 0.0, 0.0);
+		grayscale_ctf->AddRGBPoint(555.0, 1.0, 1.0, 1.0);
+		grayscale_ctf->AddRGBPoint(555.0, 1.0, 1.0, 1.0);
+		grayscale_ctf->AddRGBPoint(555.0, 1.0, 1.0, 1.0);
 	}
 
 	void populate_luts() {
@@ -553,9 +579,11 @@ public:
 		vtkSmartPointer<vtkImageMapToColors> imapper = vtkSmartPointer<vtkImageMapToColors>::New();
 		imapper->PassAlphaToOutputOn();
 		if (dset_num == 1) {
+			grayScaleLut->SetRange(range);
 			imapper->SetLookupTable(grayScaleLut);
 		}
 		else { // dset2
+			customLut->SetRange(range);
 			imapper->SetLookupTable(customLut);
 
 			// set default opacity for dset2 slices
@@ -659,7 +687,7 @@ public:
 			volumeProperty->SetColor(viridis_ctf);
 		}
 		else {
-			volumeProperty->SetColor(magma_ctf);
+			volumeProperty->SetColor(class_example_ctf);
 		}
 		
 
