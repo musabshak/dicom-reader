@@ -402,6 +402,7 @@ public:
 
 
 		// S================== VTK PIPELINE =================== //
+		// Reader -> ImageReslice -> ImageActor -> (ColorMapper) -> Renderer -> RenderWindow
 
 		vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
 
@@ -412,8 +413,9 @@ public:
 		int* dims = reader->GetOutput()->GetDimensions(); // Get the data dimensions
 		double* range = reader->GetOutput()->GetScalarRange(); // Get the range of intensity values
 
-		// Create local pointers to reslice_arr and iactor_arr. Then, based on whether dset1 or dset2 
-		// is being loaded, set these pointers appropriately (dset2 uses separate reslice and actor objects).
+		// Create local pointers for the arrays containing the vtk reslice and actor objects. Then, based 
+		// on whether dset1 or dset2 is being loaded, set these pointers appropriately (dset2 uses separate 
+		// reslice and actor objects).
 		vtkSmartPointer<vtkImageReslice>* curr_reslice_arr;
 		vtkSmartPointer<vtkImageActor>* curr_iactor_arr;
 
@@ -457,10 +459,16 @@ public:
 				lut->SetTableValue(i, (double)i / 255.0, (double)i / 255.0, (double)i / 255.0, 1.0); // value, red, green, blue, opacity
 			lut->SetRange(range);
 
+			// Map the scalar values in the image to colors with a lookup table:
+			vtkNew<vtkLookupTable> lookupTable;
+			lookupTable->SetNumberOfTableValues(256);
+			lookupTable->SetRange(0.0, 255.0);
+			lookupTable->Build();
+
 			// colormap mapper
 			vtkSmartPointer<vtkImageMapToColors> imapper = vtkSmartPointer<vtkImageMapToColors>::New();
 			imapper->PassAlphaToOutputOn();
-			imapper->SetLookupTable(lut);
+			imapper->SetLookupTable(lookupTable);
 			imapper->SetInputConnection(curr_reslice_arr[plane_idx]->GetOutputPort());
 			imapper->Update();
 
@@ -594,11 +602,34 @@ public:
 
 public slots:
 
+	bool is_valid(QDir dicom_dir) {
+
+
+		QTextStream qt_cout(stdout);
+		qt_cout << dicom_dir.path();
+
+		if (!dicom_dir.exists() || dicom_dir.count() == 0) {
+			cout << "wrong directory!";
+			return false;
+		}
+
+		// directory not changed/dialog box closed
+		if (QString::compare(dicom_dir.path(), ".") == 0) {
+			return false;
+		}
+
+		return true;
+	}
+
 
 	void load_dset1() {
 
 		QDir dicom_dir = choose_directory();
 		//QDir dicom_dir = QDir("../data/hw2-dataset");
+		
+		if (!is_valid(dicom_dir))
+			return;
+		
 
 		load_DICOM_image(dicom_dir, AXIAL, 1);
 		load_DICOM_image(dicom_dir, CORONAL, 1);
@@ -620,6 +651,9 @@ public slots:
 
 		QDir dicom_dir = choose_directory();
 		//QDir dicom_dir = QDir("../data/VHF-Pelvis");
+
+		if (!is_valid(dicom_dir))
+			return;
 
 		load_DICOM_image(dicom_dir, AXIAL, 2);
 		load_DICOM_image(dicom_dir, CORONAL, 2);
@@ -694,7 +728,6 @@ public slots:
 			// change opacity for all image/slice actors
 			for (int i = 1; i < NUM_VIEWPORTS; i++) {
 				double opacity = ((double)value) / 100;
-				cout << std::to_string(opacity);
 				iactor_arr[i]->SetOpacity(opacity);
 				window_arr[i]->Render();
 			}
@@ -711,7 +744,6 @@ public slots:
 			// change opacity for all image/slice actors
 			for (int i = 1; i < NUM_VIEWPORTS; i++) {
 				double opacity = ((double)value) / 100;
-				cout << std::to_string(opacity);
 				iactor_arr2[i]->SetOpacity(opacity);
 				window_arr[i]->Render();
 			}
