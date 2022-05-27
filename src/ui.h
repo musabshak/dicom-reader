@@ -169,11 +169,13 @@ public:
 		class_example_ctf->AddRGBPoint(555.0, 1.0, 1.0, 1.0);
 
 		// grayscale_ctf
-		grayscale_ctf->AddRGBPoint(0.0, 0.0, 0.0, 1.0);
-		grayscale_ctf->AddRGBPoint(300.0, 1.0, 0.0, 0.0);
-		grayscale_ctf->AddRGBPoint(555.0, 1.0, 1.0, 1.0);
-		grayscale_ctf->AddRGBPoint(555.0, 1.0, 1.0, 1.0);
-		grayscale_ctf->AddRGBPoint(555.0, 1.0, 1.0, 1.0);
+		grayscale_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
+		grayscale_ctf->AddRGBPoint(100, 0.094, 0.094, 0.094);
+		grayscale_ctf->AddRGBPoint(150, 0.309, 0.309, 0.309);
+		grayscale_ctf->AddRGBPoint(350, 0.576, 0.576, 0.576);
+		grayscale_ctf->AddRGBPoint(400, 0.843, 0.843, 0.843);
+		grayscale_ctf->AddRGBPoint(500, 0.976, 0.976, 0.976);
+		grayscale_ctf->AddRGBPoint(550, 0.963, 0.963, 0.963);
 	}
 
 	void populate_luts() {
@@ -684,10 +686,10 @@ public:
 
 		// colormap
 		if (dset_num == 1) {
-			volumeProperty->SetColor(viridis_ctf);
+			volumeProperty->SetColor(grayscale_ctf);
 		}
 		else {
-			volumeProperty->SetColor(class_example_ctf);
+			volumeProperty->SetColor(magma_ctf);
 		}
 		
 
