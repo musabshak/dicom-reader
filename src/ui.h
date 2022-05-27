@@ -119,6 +119,104 @@ public:
 	// summarize above in an array of int arrays
 	double* plane_arr[4] = { NULL, axial_plane, coronal_plane, sagittal_plane };
 
+	// LUTs for slice color maps
+	vtkNew<vtkLookupTable> highContrastLut;
+	vtkNew<vtkLookupTable> rainbowRedBlueLut;
+	vtkNew<vtkLookupTable> rainbowBlueRedLut;
+	vtkSmartPointer<vtkLookupTable> classExampleLut = vtkSmartPointer<vtkLookupTable>::New();
+	vtkNew<vtkLookupTable> vtkExampleLut;
+	vtkNew<vtkLookupTable> grayScaleLut;
+	vtkNew<vtkLookupTable> customLut;
+
+	// ctfs for volume color maps
+	vtkSmartPointer<vtkColorTransferFunction> magma_ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
+	vtkSmartPointer<vtkColorTransferFunction> viridis_ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
+
+	void populate_ctfs() {
+		// magma
+		magma_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
+		magma_ctf->AddRGBPoint(0.14, 0.094, 0.007, 0.286);
+		magma_ctf->AddRGBPoint(0.28, 0.309, 0.0, 0.478);
+		magma_ctf->AddRGBPoint(0.46, 0.576, 0.071, 0.502);
+		magma_ctf->AddRGBPoint(0.63, 0.843, 0.271, 0.384);
+		magma_ctf->AddRGBPoint(0.8, 0.976, 0.604, 0.388);
+		magma_ctf->AddRGBPoint(1.0, 0.973, 1.0, 0.729);
+
+		// viridis
+		viridis_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
+		viridis_ctf->AddRGBPoint(0.18, 0.28, 0.035, 0.396);
+		viridis_ctf->AddRGBPoint(0.4, 0.223, 0.325, 0.556);
+		viridis_ctf->AddRGBPoint(0.7, 0.058, 0.635, 0.529);
+		viridis_ctf->AddRGBPoint(1.0, 1.0, 0.913, 0.0);
+	}
+
+	void populate_luts() {
+
+		// highContrastLut
+		highContrastLut->SetNumberOfColors(256);
+		highContrastLut->Build();
+
+		for (int l = 0; l < 16; ++l)
+		{
+			highContrastLut->SetTableValue(l * 16, 1, 0, 0, 1);
+			highContrastLut->SetTableValue(l * 16 + 1, 0, 1, 0, 1);
+			highContrastLut->SetTableValue(l * 16 + 2, 0, 0, 1, 1);
+			highContrastLut->SetTableValue(l * 16 + 3, 0, 0, 0, 1);
+		}
+
+		// ranbowRedBluelut
+		rainbowRedBlueLut->SetNumberOfColors(256);
+		rainbowRedBlueLut->SetHueRange(0.0, 0.667);
+		rainbowRedBlueLut->Build();
+
+		// rainbowBlueRedlut
+		rainbowBlueRedLut->SetNumberOfColors(256);
+		rainbowBlueRedLut->SetHueRange(0.667, 0.0);
+		rainbowBlueRedLut->Build();
+
+		// classExampleLut
+		classExampleLut->SetNumberOfColors(256);
+		classExampleLut->Build();
+		for (int i = 0; i < 256; i++)
+			classExampleLut->SetTableValue(i, (double)i / 255.0, (double)i / 255.0, (double)i / 255.0, 1.0); // value, red, green, blue, opacity
+		classExampleLut->SetRange(0, 255);
+
+		// vtkExampleLut
+		vtkExampleLut->SetNumberOfTableValues(256);
+		vtkExampleLut->SetRange(0.0, 255.0);
+		vtkExampleLut->Build();
+
+		// grayScaleLut
+		grayScaleLut->SetHueRange(0, 0);
+		grayScaleLut->SetSaturationRange(0, 0);
+		grayScaleLut->SetValueRange(0.2, 1.0);
+		grayScaleLut->SetNumberOfColors(256);
+		grayScaleLut->SetHueRange(0.0, 0.667);
+		grayScaleLut->Build();
+
+		// customLut
+		double m_mask_opacity = 1;
+		customLut->SetRange(0, 4);
+		customLut->SetRampToLinear();
+		customLut->SetValueRange(0, 1);
+		customLut->SetHueRange(0, 0);
+		customLut->SetSaturationRange(0, 0);
+
+		customLut->SetNumberOfTableValues(10);
+		customLut->SetTableRange(0, 9);
+		customLut->SetTableValue(0, 0, 0, 0, 0);
+		customLut->SetTableValue(1, 1, 0, 0, m_mask_opacity);
+		customLut->SetTableValue(2, 0, 1, 0, m_mask_opacity);
+		customLut->SetTableValue(3, 1, 1, 0, m_mask_opacity);
+		customLut->SetTableValue(4, 0, 0, 1, m_mask_opacity);
+		customLut->SetTableValue(5, 1, 0, 1, m_mask_opacity);
+		customLut->SetTableValue(6, 0, 1, 1, m_mask_opacity);
+		customLut->SetTableValue(7, 1, 0.5, 0.5, m_mask_opacity);
+		customLut->SetTableValue(8, 0.5, 1, 0.5, m_mask_opacity);
+		customLut->SetTableValue(9, 0.5, 0.5, 1, m_mask_opacity);
+		customLut->Build();
+
+	};
 
 	// Constructor (happens when created)
 	ui() {
@@ -131,7 +229,8 @@ public:
 		this->setWindowState(Qt::WindowMaximized);
 		this->setMinimumSize(1200, 900);
 
-
+		populate_ctfs();
+		populate_luts();
 
 
 
@@ -449,39 +548,26 @@ public:
 		curr_reslice_arr[plane_idx]->SetInterpolationModeToLinear();
 		curr_reslice_arr[plane_idx]->Update();
 
-		// change color map for dset2
-		if (dset_num == 2) {
-			// colormap
-			vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
-			lut->SetNumberOfColors(256);
-			lut->Build();
-			for (int i = 0; i < 256; i++)
-				lut->SetTableValue(i, (double)i / 255.0, (double)i / 255.0, (double)i / 255.0, 1.0); // value, red, green, blue, opacity
-			lut->SetRange(range);
 
-			// Map the scalar values in the image to colors with a lookup table:
-			vtkNew<vtkLookupTable> lookupTable;
-			lookupTable->SetNumberOfTableValues(256);
-			lookupTable->SetRange(0.0, 255.0);
-			lookupTable->Build();
-
-			// colormap mapper
-			vtkSmartPointer<vtkImageMapToColors> imapper = vtkSmartPointer<vtkImageMapToColors>::New();
-			imapper->PassAlphaToOutputOn();
-			imapper->SetLookupTable(lookupTable);
-			imapper->SetInputConnection(curr_reslice_arr[plane_idx]->GetOutputPort());
-			imapper->Update();
-
-			// VTKMapper -> VTKImageActor
-			curr_iactor_arr[plane_idx]->GetMapper()->SetInputConnection(imapper->GetOutputPort());
+		// colormap mapper
+		vtkSmartPointer<vtkImageMapToColors> imapper = vtkSmartPointer<vtkImageMapToColors>::New();
+		imapper->PassAlphaToOutputOn();
+		if (dset_num == 1) {
+			imapper->SetLookupTable(grayScaleLut);
+		}
+		else { // dset2
+			imapper->SetLookupTable(customLut);
 
 			// set default opacity for dset2 slices
 			curr_iactor_arr[plane_idx]->SetOpacity(DSET2_OPACITY);
 		}
-		else {
-			// VTKImageReslice -> VTKImageActor
-			curr_iactor_arr[plane_idx]->GetMapper()->SetInputConnection(curr_reslice_arr[plane_idx]->GetOutputPort());
-		}
+
+		imapper->SetInputConnection(curr_reslice_arr[plane_idx]->GetOutputPort());
+		imapper->Update();
+
+		// VTKMapper -> VTKImageActor
+		curr_iactor_arr[plane_idx]->GetMapper()->SetInputConnection(imapper->GetOutputPort());
+
 
 		// VTKImageActor -> VTKRenderer (initialized in constructor)
 		renderer_arr[plane_idx]->AddActor(curr_iactor_arr[plane_idx]); // Add the actor to the renderer
@@ -569,11 +655,13 @@ public:
 		volumeProperty->SetScalarOpacity(opacity);
 
 		// colormap
-		vtkSmartPointer<vtkColorTransferFunction> color = vtkSmartPointer<vtkColorTransferFunction>::New();
-		color->AddRGBPoint(0.0, 0.0, 0.0, 1.0);
-		color->AddRGBPoint(300.0, 1.0, 0.0, 0.0);
-		color->AddRGBPoint(555.0, 1.0, 1.0, 1.0);
-		volumeProperty->SetColor(color);
+		if (dset_num == 1) {
+			volumeProperty->SetColor(viridis_ctf);
+		}
+		else {
+			volumeProperty->SetColor(magma_ctf);
+		}
+		
 
 		// VolumeMapper, VolumeProperty -> Volume
 		vtkSmartPointer<vtkVolume> volume = vtkSmartPointer<vtkVolume>::New();
@@ -626,10 +714,10 @@ public slots:
 
 		QDir dicom_dir = choose_directory();
 		//QDir dicom_dir = QDir("../data/hw2-dataset");
-		
+
 		if (!is_valid(dicom_dir))
 			return;
-		
+
 
 		load_DICOM_image(dicom_dir, AXIAL, 1);
 		load_DICOM_image(dicom_dir, CORONAL, 1);
