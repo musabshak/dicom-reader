@@ -86,9 +86,12 @@ public:
 	vtkSmartPointer<vtkImageActor> iactor_arr[NUM_VIEWPORTS];
 	vtkSmartPointer<vtkRenderer> renderer_arr[NUM_VIEWPORTS];
 
-	// vtik reslice filter, actors for dataset 2
+	// vtk reslice filter, actors for dataset 2
 	vtkSmartPointer<vtkImageReslice> reslice_arr2[NUM_VIEWPORTS];
 	vtkSmartPointer<vtkImageActor> iactor_arr2[NUM_VIEWPORTS];
+
+	// vtk volume property for dataset 1, 2
+	vtkSmartPointer<vtkVolumeProperty> volume_property_arr[2];
 
 	// colormap comboboxes
 	QComboBox* color_combobox0, * color_combobox1;
@@ -355,6 +358,10 @@ public:
 		// initialize colormap combobox labels
 		QLabel* color_combobox_label0 = new QLabel("Volume Color Map:");
 		QLabel* color_combobox_label1 = new QLabel("Volume Color Map:");
+
+		// initialize volume properties
+		volume_property_arr[0] = vtkSmartPointer<vtkVolumeProperty>::New();
+		volume_property_arr[1] = vtkSmartPointer<vtkVolumeProperty>::New();
 
 
 
@@ -681,30 +688,29 @@ public:
 
 
 		// volume properties
-		vtkSmartPointer<vtkVolumeProperty> volumeProperty = vtkSmartPointer<vtkVolumeProperty>::New();
-		volumeProperty->ShadeOff();
-		volumeProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
+		volume_property_arr[dset_num-1]->ShadeOff();
+		volume_property_arr[dset_num - 1]->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
 
 		// opacity
 		vtkSmartPointer<vtkPiecewiseFunction> opacity = vtkSmartPointer<vtkPiecewiseFunction>::New();
 		opacity->AddPoint(0.0, 0.0);
 		opacity->AddPoint(90.0, 0.05);
 		opacity->AddPoint(555.0, 0.1);
-		volumeProperty->SetScalarOpacity(opacity);
+		volume_property_arr[dset_num - 1]->SetScalarOpacity(opacity);
 
 		// colormap
 		if (dset_num == 1) {
-			volumeProperty->SetColor(grayscale_ctf);
+			volume_property_arr[dset_num - 1]->SetColor(grayscale_ctf);
 		}
 		else {
-			volumeProperty->SetColor(magma_ctf);
+			volume_property_arr[dset_num - 1]->SetColor(magma_ctf);
 		}
 		
 
 		// VolumeMapper, VolumeProperty -> Volume
 		vtkSmartPointer<vtkVolume> volume = vtkSmartPointer<vtkVolume>::New();
 		volume->SetMapper(volumeMapper);
-		volume->SetProperty(volumeProperty);
+		volume->SetProperty(volume_property_arr[dset_num - 1]);
 
 		// Volume -> Renderer
 		renderer_arr[0]->AddViewProp(volume);
@@ -765,12 +771,18 @@ public slots:
 
 		// ==== Restore UI elements to default positions after loading data 
 		// (useful in case user messed with UI elements before loading data)
+
+		// slice sliders
 		for (int i = 1; i < NUM_VIEWPORTS; i++) {
 			slider_arr[i]->setValue(0);
 		}
 
+		// opacity sliders
 		opacity_label0->setText("Slice Opacity: 100");
 		opacity_slider0->setValue(100);
+
+		// colormap combobox
+		color_combobox0->setCurrentIndex(3); //grayscale
 
 	}
 
@@ -791,6 +803,9 @@ public slots:
 		// (useful in case user messed with UI elements before loading data)
 		opacity_label1->setText("Slice Opacity: " + QString::number(DSET2_OPACITY * 100));
 		opacity_slider1->setValue(DSET2_OPACITY * 100);
+
+		// colormap combobox
+		color_combobox1->setCurrentIndex(2); // magma
 	}
 
 
@@ -879,8 +894,17 @@ public slots:
 
 	void combobox_changed(int new_index) {
 
-	}
+		QObject* caller = sender(); // determine dset1/dset2 opacity slider
 
+		int idx = (caller == color_combobox0) ? 0 : 1;
+
+		vtkSmartPointer<vtkColorTransferFunction> map[4] = {
+			class_example_ctf, viridis_ctf, magma_ctf, grayscale_ctf };
+
+		volume_property_arr[idx]->SetColor(map[new_index]);
+
+		window_arr[0]->Render();
+	}
 
 
 };
