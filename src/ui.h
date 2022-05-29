@@ -1,3 +1,37 @@
+/*
+Author: Musab Shakeel
+Date: 5/2022
+
+This (header) file contains bulk of the code for a Qt application - a 
+general purpose DICOM reader. The VTK library is used to implement
+the visualization in this application. 
+
+Notable features:
+- Ability to load and view two separate DICOM datasets. The user is able to 
+choose a directory for each dataset.
+- The second dataset overlays on top of the first dataset.
+- For each dataset, the axial/coronal/sagittal slices are shown in 3 separate 
+viewports. 
+- The volume rendering is also visualized in a separate viewport.
+- User is able to change the opacity of the slice renderings.
+- User is able to change the colormap for the volume renderings.
+- The patient name (pulled from the DICOM data) is displayed for each dataset.
+
+Pressing improvements/TODOs:
+- Add ability to change window/level for the slice views.
+- Add ability to specify custom color maps (for volume and slice views).
+- Add ability to translate/move one DICOM dataset in a viewport (for some datasets, 
+it becomes difficult to observe differences when both datasets are overlaid *exactly*
+on top of each other).
+
+Expected behavior:
+- Dataset 1 and dataset 2 are loaded once, in whatever order. If dataset 1 is uploaded 
+multiple times, behavior is undefined.
+- The application is robust enough to never crash even with unexpected usage.
+
+*/
+
+
 
 // Prevent this header file from being included multiple times
 #pragma once
@@ -137,6 +171,7 @@ public:
 	vtkSmartPointer<vtkColorTransferFunction> class_example_ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
 	vtkSmartPointer<vtkColorTransferFunction> grayscale_ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
 
+	// Populate the color transfer function VTK objects required for the 3D VTKVolume color maps.
 	void populate_ctfs() {
 		// magma
 	   /* magma_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
@@ -155,11 +190,6 @@ public:
 		magma_ctf->AddRGBPoint(550, 0.973, 1.0, 0.729);
 
 		// viridis
-		/*viridis_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
-		viridis_ctf->AddRGBPoint(0.18, 0.28, 0.035, 0.396);
-		viridis_ctf->AddRGBPoint(0.4, 0.223, 0.325, 0.556);
-		viridis_ctf->AddRGBPoint(0.7, 0.058, 0.635, 0.529);
-		viridis_ctf->AddRGBPoint(1.0, 1.0, 0.913, 0.0);*/
 		viridis_ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
 		viridis_ctf->AddRGBPoint(100, 0.28, 0.035, 0.396);
 		viridis_ctf->AddRGBPoint(200, 0.223, 0.325, 0.556);
@@ -181,6 +211,7 @@ public:
 		grayscale_ctf->AddRGBPoint(550, 0.963, 0.963, 0.963);
 	}
 
+	// Populate the VTK lookup tables (member variables) required for the 2D ImageActor color maps.
 	void populate_luts() {
 
 		// highContrastLut
@@ -209,7 +240,9 @@ public:
 		classExampleLut->SetNumberOfColors(256);
 		classExampleLut->Build();
 		for (int i = 0; i < 256; i++)
-			classExampleLut->SetTableValue(i, (double)i / 255.0, (double)i / 255.0, (double)i / 255.0, 1.0); // value, red, green, blue, opacity
+			classExampleLut->SetTableValue(i, (double)i / 255.0, 
+				(double)i / 255.0, 
+				(double)i / 255.0, 1.0); // value, red, green, blue, opacity
 		classExampleLut->SetRange(0, 255);
 
 		// vtkExampleLut
